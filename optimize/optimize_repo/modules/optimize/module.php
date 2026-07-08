@@ -6,9 +6,8 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
  * Optimize module.
  *
  * @package HostCMS 7\Optimize
- * @version 2.0
- * @date 2026-07-07
- * @see https://hostcms.ru/api7/
+ * @version 2.3
+ * @date 2026-07-08
  */
 class Optimize_Module extends Core_Module
 {
@@ -16,13 +15,13 @@ class Optimize_Module extends Core_Module
 	 * Module version
 	 * @var string
 	 */
-	public $version = '2.0';
+	public $version = '2.3';
 
 	/**
 	 * Module date
 	 * @var date
 	 */
-	public $date = '2026-07-07';
+	public $date = '2026-07-08';
 
 	/**
 	 * Module name
@@ -31,15 +30,9 @@ class Optimize_Module extends Core_Module
 	protected $_moduleName = 'optimize';
 
 	/**
-	 * Marker inserted right after <!DOCTYPE ... in every patched template.
-	 * @var string
+	 * Old template markers kept only for cleanup.
 	 */
 	const START_MARKER = "<?php if (Core::moduleIsActive('optimize')) Optimize::ob(); ?>";
-
-	/**
-	 * Marker inserted right before </html> in every patched template.
-	 * @var string
-	 */
 	const END_MARKER = "<?php if (Core::moduleIsActive('optimize')) Optimize::clean(); ?>";
 
 	/**
@@ -59,57 +52,44 @@ class Optimize_Module extends Core_Module
 				'onclick' => "$.adminLoad({path: '/admin/optimize/index.php'}); return false"
 			)
 		);
+
+		$this->_autoStartBuffer();
 	}
 
 	/**
-	 * Insert compressor markers into every template of the current site.
-	 *
-	 * Idempotent: templates that already contain the marker are left
-	 * untouched, so calling install() twice (or reactivating the
-	 * module) never duplicates the injected code.
+	 * Start output optimization automatically on frontend HTML requests.
 	 */
-	protected function _insertCode()
+	protected function _autoStartBuffer()
 	{
-		$oTemplates = Core_Entity::factory('Template');
-
-		$oTemplates->queryBuilder()
-			->clear()
-			->where('site_id', '=', CURRENT_SITE);
-
-		foreach ($oTemplates->findAll() as $oTemplate) {
-
-			$filename = CMS_FOLDER . "templates/template{$oTemplate->id}/template.htm";
-
-			if (!is_file($filename) || !is_writable($filename)) {
-				continue;
-			}
-
-			$file = file_get_contents($filename);
-
-			if (strpos($file, self::START_MARKER) !== FALSE) {
-				continue; // already patched
-			}
-
-			$file = preg_replace(
-				'/<!DOCTYPE/i',
-				self::START_MARKER . ' <!DOCTYPE',
-				$file,
-				1
-			);
-
-			$file = preg_replace(
-				'/<\/html\s*>/i',
-				'</html> ' . self::END_MARKER,
-				$file,
-				1
-			);
-
-			file_put_contents($filename, $file);
+		if (PHP_SAPI === 'cli') {
+			return;
 		}
+
+		$requestUri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+		$scriptName = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+		$accept = isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : '';
+
+		if (strpos($requestUri, '/admin/') === 0 || strpos($scriptName, '/admin/') !== FALSE) {
+			return;
+		}
+
+		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+			return;
+		}
+
+		if ($accept !== '' && stripos($accept, 'text/html') === FALSE && stripos($accept, '*/*') === FALSE) {
+			return;
+		}
+
+		if (!class_exists('Optimize')) {
+			return;
+		}
+
+		Optimize::ob();
 	}
 
 	/**
-	 * Remove compressor markers from every template of the current site.
+	 * Remove old compressor markers from every template of the current site.
 	 */
 	protected function _deleteCode()
 	{
@@ -120,7 +100,6 @@ class Optimize_Module extends Core_Module
 			->where('site_id', '=', CURRENT_SITE);
 
 		foreach ($oTemplates->findAll() as $oTemplate) {
-
 			$filename = CMS_FOLDER . "templates/template{$oTemplate->id}/template.htm";
 
 			if (!is_file($filename) || !is_writable($filename)) {
@@ -130,7 +109,8 @@ class Optimize_Module extends Core_Module
 			$file = file_get_contents($filename);
 			$file = str_replace(self::START_MARKER . ' ', '', $file);
 			$file = str_replace(' ' . self::END_MARKER, '', $file);
-			// also clean up markers inserted by module v1.0, in case of an upgrade
+			$file = str_replace(self::START_MARKER, '', $file);
+			$file = str_replace(self::END_MARKER, '', $file);
 			$file = str_replace("<?php if(Core::moduleIsActive ('optimize')) Optimize::ob();?> ", '', $file);
 			$file = str_replace(" <?php if(Core::moduleIsActive ('optimize')) Optimize::clean();?>", '', $file);
 
@@ -143,7 +123,7 @@ class Optimize_Module extends Core_Module
 	 */
 	public function install()
 	{
-		$this->_insertCode();
+		$this->_deleteCode();
 	}
 
 	/**
