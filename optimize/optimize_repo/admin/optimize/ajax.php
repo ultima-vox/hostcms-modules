@@ -19,7 +19,7 @@ $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
 if (!in_array($name, $allowed, TRUE)) {
     echo json_encode(array(
         'status' => 'error',
-        'message' => 'Недопустимый параметр'
+        'message' => Core::_('Optimize.invalid_setting')
     ));
     exit;
 }
