@@ -52,54 +52,58 @@ $oMainTab = Admin_Form_Entity::factory('Tab')
     ->caption(Core::_('Optimize.settings_tab'));
 
 $oMainTab
-    ->add(
-        Admin_Form_Entity::factory('Code')->html(
-            '<div class="optimize-layout"><div class="optimize-settings-panel">'
-        )
-    )
-    ->add(
-        Admin_Form_Entity::factory('Div')->class('row')->add(
-            Admin_Form_Entity::factory('Checkbox')
-                ->name('minify_html')
-                ->class('optimize-toggle')
-                ->value(!empty($settings['minify_html']) ? 1 : 0)
-                ->caption(Core::_('Optimize.minify_html'))
-                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
-        )
-    )
-    ->add(
-        Admin_Form_Entity::factory('Div')->class('row')->add(
-            Admin_Form_Entity::factory('Checkbox')
-                ->name('combine_css')
-                ->class('optimize-toggle')
-                ->value(!empty($settings['combine_css']) ? 1 : 0)
-                ->caption(Core::_('Optimize.combine_css'))
-                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
-        )
-    )
-    ->add(
-        Admin_Form_Entity::factory('Div')->class('row')->add(
-            Admin_Form_Entity::factory('Checkbox')
-                ->name('combine_js')
-                ->class('optimize-toggle')
-                ->value(!empty($settings['combine_js']) ? 1 : 0)
-                ->caption(Core::_('Optimize.combine_js'))
-                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
-        )
-    )
-    ->add(
-        Admin_Form_Entity::factory('Code')->html(
-            '</div><aside class="optimize-stats-panel">'
-            . '<div class="optimize-stats-grid">'
-            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
-            . '</div>'
-            . '<p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p>'
-            . '</aside></div>'
-        )
-    );
+    ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-layout"><div class="optimize-settings-panel">'))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('minify_html')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['minify_html']) ? 1 : 0)
+            ->caption(Core::_('Optimize.minify_html'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('combine_css')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['combine_css']) ? 1 : 0)
+            ->caption(Core::_('Optimize.combine_css'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('minify_css')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['minify_css']) ? 1 : 0)
+            ->caption(Core::_('Optimize.minify_css'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('combine_js')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['combine_js']) ? 1 : 0)
+            ->caption(Core::_('Optimize.combine_js'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('minify_js')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['minify_js']) ? 1 : 0)
+            ->caption(Core::_('Optimize.minify_js'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-cleanup"><input type="button" class="btn btn-gray optimize-clear-bundles" value="' . htmlspecialchars(Core::_('Optimize.clear_bundles'), ENT_QUOTES) . '"><p>' . htmlspecialchars(Core::_('Optimize.clear_bundles_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '</div><aside class="optimize-stats-panel"><div class="optimize-stats-grid">'
+        . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
+        . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
+        . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
+        . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
+        . '</div><p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p></aside></div>'
+    ));
 
 $oTabs = Admin_Form_Entity::factory('Tabs');
 $oTabs->add($oMainTab);
