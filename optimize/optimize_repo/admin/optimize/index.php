@@ -53,6 +53,8 @@ $oMainTab = Admin_Form_Entity::factory('Tab')
 
 $oMainTab
     ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-layout"><div class="optimize-settings-panel">'))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_html'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
             ->name('minify_html')
@@ -61,6 +63,8 @@ $oMainTab
             ->caption(Core::_('Optimize.minify_html'))
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_css'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
             ->name('combine_css')
@@ -75,8 +79,21 @@ $oMainTab
             ->class('optimize-toggle')
             ->value(!empty($settings['minify_css']) ? 1 : 0)
             ->caption(Core::_('Optimize.minify_css'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field optimize-dependent-css'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('critical_css_enabled')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['critical_css_enabled']) ? 1 : 0)
+            ->caption(Core::_('Optimize.critical_css_enabled'))
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.critical_css'), ENT_QUOTES) . '</label><textarea name="critical_css" class="optimize-setting-text optimize-code-css" rows="10">' . htmlspecialchars($settings['critical_css'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.critical_css_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_js'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
             ->name('combine_js')
@@ -91,8 +108,75 @@ $oMainTab
             ->class('optimize-toggle')
             ->value(!empty($settings['minify_js']) ? 1 : 0)
             ->caption(Core::_('Optimize.minify_js'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field optimize-dependent-js'))
+    ))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_fonts'), ENT_QUOTES) . '</h3>'))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('preload_fonts_enabled')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['preload_fonts_enabled']) ? 1 : 0)
+            ->caption(Core::_('Optimize.preload_fonts_enabled'))
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.preload_fonts'), ENT_QUOTES) . '</label><textarea name="preload_fonts" class="optimize-setting-text" rows="5">' . htmlspecialchars($settings['preload_fonts'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.preload_fonts_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_images'), ENT_QUOTES) . '</h3>'))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('lazy_load_images')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['lazy_load_images']) ? 1 : 0)
+            ->caption(Core::_('Optimize.lazy_load_images'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude'), ENT_QUOTES) . '</label><textarea name="lazy_load_exclude" class="optimize-setting-text" rows="4">' . htmlspecialchars($settings['lazy_load_exclude'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('rewrite_webp')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['rewrite_webp']) ? 1 : 0)
+            ->caption(Core::_('Optimize.rewrite_webp'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('rewrite_avif')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['rewrite_avif']) ? 1 : 0)
+            ->caption(Core::_('Optimize.rewrite_avif'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+
+    ->add(Admin_Form_Entity::factory('Code')->html('<h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_hints'), ENT_QUOTES) . '</h3>'))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('dns_prefetch_enabled')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['dns_prefetch_enabled']) ? 1 : 0)
+            ->caption(Core::_('Optimize.dns_prefetch_enabled'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.dns_prefetch'), ENT_QUOTES) . '</label><textarea name="dns_prefetch" class="optimize-setting-text" rows="4">' . htmlspecialchars($settings['dns_prefetch'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.resource_hint_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('preconnect_enabled')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['preconnect_enabled']) ? 1 : 0)
+            ->caption(Core::_('Optimize.preconnect_enabled'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html(
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.preconnect'), ENT_QUOTES) . '</label><textarea name="preconnect" class="optimize-setting-text" rows="4">' . htmlspecialchars($settings['preconnect'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.resource_hint_hint'), ENT_QUOTES) . '</p></div>'
+    ))
+
     ->add(Admin_Form_Entity::factory('Code')->html(
         '</div><aside class="optimize-stats-panel"><div class="optimize-stats-grid">'
         . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
