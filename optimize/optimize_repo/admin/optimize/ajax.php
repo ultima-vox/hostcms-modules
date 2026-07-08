@@ -7,7 +7,6 @@ Core_Auth::authorization('optimize');
 header('Content-Type: application/json; charset=UTF-8');
 
 $allowed = array(
-    'enabled',
     'minify_html',
     'combine_css',
     'combine_js'
