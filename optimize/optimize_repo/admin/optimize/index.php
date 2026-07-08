@@ -1,85 +1,139 @@
 <?php
 
-defined('HOSTCMS') || exit('HostCMS: access denied.');
+require_once('../../bootstrap.php');
 
-/**
- * Settings screen for the "optimize" module.
- *
- * Loaded into the admin content area via the $.adminLoad menu entry
- * registered in module.php, so this outputs a plain HTML fragment (no
- * <html>/<head>/<body>) — the surrounding admin chrome is already there.
- *
- * NOTE: this couldn't be tested against a live HostCMS 7 admin center, so
- * while the settings logic (Core_Array::getPost, Optimize_Settings) is
- * solid, the markup/styling may need a small touch-up to match your
- * admin skin exactly.
- */
+Core_Auth::authorization($sModule = 'optimize');
 
-$siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
+$sAdminFormAction = '/admin/optimize/index.php';
+$oAdmin_Form = Core_Entity::factory('Admin_Form')->getByGuid('OPTIMIZE-SETTINGS-FORM');
 
-if (Core_Array::getPost('optimize_save')) {
-	Optimize_Settings::saveToggles(
-		Core_Array::getPost('combine_css') ? TRUE : FALSE,
-		Core_Array::getPost('combine_js') ? TRUE : FALSE,
-		$siteId
-	);
+if (!$oAdmin_Form) {
+    $oAdmin_Form = Core_Entity::factory('Admin_Form');
+    $oAdmin_Form->name = 'Optimize';
+    $oAdmin_Form->guid = 'OPTIMIZE-SETTINGS-FORM';
+    $oAdmin_Form->save();
 }
 
+$oAdmin_Form_Controller = Admin_Form_Controller::create($oAdmin_Form);
+$oAdmin_Form_Controller
+    ->module(Core_Module::factory($sModule))
+    ->setUp()
+    ->path($sAdminFormAction)
+    ->title('Optimize')
+    ->pageTitle('Optimize');
+
+$siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
 $settings = Optimize_Settings::get($siteId);
-$stats = $settings['stats'];
+$statsSummary = Optimize_Settings::getStatsSummary($siteId);
 
-$cssSaved = max(0, $stats['css_original_bytes'] - $stats['css_minified_bytes']);
-$jsSaved = max(0, $stats['js_original_bytes'] - $stats['js_minified_bytes']);
-$totalSaved = $cssSaved + $jsSaved;
-$totalRequestsSaved = $stats['css_requests_saved'] + $stats['js_requests_saved'];
+$oAdmin_Form_Entity_Breadcrumbs = Admin_Form_Entity::factory('Breadcrumbs');
+$oAdmin_Form_Entity_Breadcrumbs->add(
+    Admin_Form_Entity::factory('Breadcrumb')
+        ->name('Optimize')
+        ->href($oAdmin_Form_Controller->getAdminLoadHref($oAdmin_Form_Controller->getPath(), NULL, NULL, ''))
+        ->onclick($oAdmin_Form_Controller->getAdminLoadAjax($oAdmin_Form_Controller->getPath(), NULL, NULL, ''))
+);
+$oAdmin_Form_Controller->addEntity($oAdmin_Form_Entity_Breadcrumbs);
 
-?>
-<div class="optimize-admin" style="max-width: 560px;">
-	<h3>Optimize</h3>
+$oAdmin_View = Admin_View::create();
+$oAdmin_View
+    ->module(Core_Module::factory($sModule))
+    ->pageTitle('Optimize');
 
-	<form method="post" action="">
-		<p>
-			<label>
-				<input type="checkbox" name="combine_css" value="1" <?php echo $settings['combine_css'] ? 'checked' : ''; ?>>
-				Объединять и минифицировать локальные CSS-файлы
-			</label>
-		</p>
-		<p>
-			<label>
-				<input type="checkbox" name="combine_js" value="1" <?php echo $settings['combine_js'] ? 'checked' : ''; ?>>
-				Объединять локальные JS-файлы (консервативная минификация)
-			</label>
-		</p>
-		<p>
-			<button type="submit" name="optimize_save" value="1" class="btn btn-primary">Сохранить</button>
-		</p>
-	</form>
+$oAdmin_Form_Entity_Form = Admin_Form_Entity::factory('Form')
+    ->controller($oAdmin_Form_Controller)
+    ->action($oAdmin_Form_Controller->getPath())
+    ->enctype('multipart/form-data');
 
-	<hr>
+$oMainTab = Admin_Form_Entity::factory('Tab')
+    ->name('main')
+    ->caption('Настройки');
 
-	<h4>Статистика</h4>
-	<table class="table" style="max-width: 460px;">
-		<tr>
-			<td>Сэкономлено места (всего)</td>
-			<td><strong><?php echo htmlspecialchars(Optimize_Settings::formatBytes($totalSaved), ENT_QUOTES); ?></strong></td>
-		</tr>
-		<tr>
-			<td>&nbsp;&nbsp;— из них CSS</td>
-			<td><?php echo htmlspecialchars(Optimize_Settings::formatBytes($cssSaved), ENT_QUOTES); ?></td>
-		</tr>
-		<tr>
-			<td>&nbsp;&nbsp;— из них JS</td>
-			<td><?php echo htmlspecialchars(Optimize_Settings::formatBytes($jsSaved), ENT_QUOTES); ?></td>
-		</tr>
-		<tr>
-			<td>HTTP-запросов убрано за счёт объединения</td>
-			<td><strong><?php echo (int) $totalRequestsSaved; ?></strong></td>
-		</tr>
-	</table>
+$oMainTab
+    ->add(
+        Admin_Form_Entity::factory('Div')->class('row')->add(
+            Admin_Form_Entity::factory('Checkbox')
+                ->name('enabled')
+                ->class('optimize-toggle')
+                ->value(!empty($settings['enabled']) ? 1 : 0)
+                ->caption('Включить модуль Optimize')
+                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+        )
+    )
+    ->add(
+        Admin_Form_Entity::factory('Div')->class('row')->add(
+            Admin_Form_Entity::factory('Checkbox')
+                ->name('minify_html')
+                ->class('optimize-toggle')
+                ->value(!empty($settings['minify_html']) ? 1 : 0)
+                ->caption('Минифицировать HTML')
+                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+        )
+    )
+    ->add(
+        Admin_Form_Entity::factory('Div')->class('row')->add(
+            Admin_Form_Entity::factory('Checkbox')
+                ->name('combine_css')
+                ->class('optimize-toggle')
+                ->value(!empty($settings['combine_css']) ? 1 : 0)
+                ->caption('Объединять и минифицировать локальные CSS-файлы')
+                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+        )
+    )
+    ->add(
+        Admin_Form_Entity::factory('Div')->class('row')->add(
+            Admin_Form_Entity::factory('Checkbox')
+                ->name('combine_js')
+                ->class('optimize-toggle')
+                ->value(!empty($settings['combine_js']) ? 1 : 0)
+                ->caption('Объединять локальные JS-файлы')
+                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+        )
+    )
+    ->add(
+        Admin_Form_Entity::factory('Code')->html(
+            '<div class="optimize-stats-grid">'
+            . '<div><span>Всего</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>CSS</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>JS</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>Запросов убрано</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
+            . '</div>'
+            . '<p class="optimize-note">Статистика обновляется только при реальной пересборке CSS/JS-бандла.</p>'
+        )
+    );
 
-	<p style="color: #777; font-size: 0.9em;">
-		Счётчик растёт только при реальной пересборке бандла (когда исходные
-		файлы поменялись и кэш обновляется), а не при каждом показе страницы —
-		так что это накопительная экономия за всё время, а не нагрузка трафика.
-	</p>
-</div>
+$oTabs = Admin_Form_Entity::factory('Tabs');
+$oTabs->add($oMainTab);
+$oAdmin_Form_Entity_Form->add($oTabs);
+
+$sCssFile = CMS_FOLDER . 'admin/optimize/assets/style.css';
+$sJsFile = CMS_FOLDER . 'admin/optimize/assets/script.js';
+$sAssets = '';
+
+if (is_file($sCssFile)) {
+    $sAssets .= '<style>' . file_get_contents($sCssFile) . '</style>';
+}
+
+if (is_file($sJsFile)) {
+    $sAssets .= '<script>' . file_get_contents($sJsFile) . '</script>';
+}
+
+ob_start();
+
+echo $sAssets;
+$oAdmin_Form_Entity_Form->execute();
+
+$content = ob_get_clean();
+
+ob_start();
+
+$oAdmin_View
+    ->content($content)
+    ->show();
+
+Core_Skin::instance()
+    ->answer()
+    ->ajax(Core_Array::getRequest('_', FALSE))
+    ->content(ob_get_clean())
+    ->title('Optimize')
+    ->execute();
