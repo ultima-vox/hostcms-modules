@@ -94,9 +94,6 @@ $oMainTab
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
     ->add(Admin_Form_Entity::factory('Code')->html(
-        '<div class="optimize-cleanup"><input type="button" class="btn btn-gray optimize-clear-bundles" value="' . htmlspecialchars(Core::_('Optimize.clear_bundles'), ENT_QUOTES) . '"><p>' . htmlspecialchars(Core::_('Optimize.clear_bundles_hint'), ENT_QUOTES) . '</p></div>'
-    ))
-    ->add(Admin_Form_Entity::factory('Code')->html(
         '</div><aside class="optimize-stats-panel"><div class="optimize-stats-grid">'
         . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
         . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
