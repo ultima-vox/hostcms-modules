@@ -5,6 +5,14 @@ return array(
     'menu_name' => 'HTML-оптимизатор',
     'settings_tab' => 'Настройки',
 
+    'tab_optimize' => 'Оптимизация',
+    'tab_resources' => 'Ресурсы',
+    'tab_network' => 'Сеть',
+    'tab_stats' => 'Статистика',
+    'status_title' => 'Текущий статус',
+    'status_on' => 'Вкл',
+    'status_off' => 'Выкл',
+
     'section_html' => 'HTML',
     'section_css' => 'CSS',
     'section_js' => 'JavaScript',
