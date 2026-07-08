@@ -13,6 +13,19 @@
         });
     }
 
+    function postOptimize(formData) {
+        return fetch('/admin/optimize/ajax.php', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(function (response) {
+            return response.json();
+        });
+    }
+
     function initOptimizeToggles() {
         var inputs = document.querySelectorAll('input.optimize-toggle[type="checkbox"]');
 
@@ -27,22 +40,13 @@
                 var oldChecked = !input.checked;
                 var formData = new FormData();
 
+                formData.append('action', 'toggle');
                 formData.append('name', input.name);
                 formData.append('value', input.checked ? '1' : '0');
 
                 input.disabled = true;
 
-                fetch('/admin/optimize/ajax.php', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                    .then(function (response) {
-                        return response.json();
-                    })
+                postOptimize(formData)
                     .then(function (data) {
                         if (!data || data.status !== 'ok') {
                             input.checked = oldChecked;
@@ -63,9 +67,48 @@
         });
     }
 
-    initOptimizeToggles();
+    function initCleanupButton() {
+        var button = document.querySelector('.optimize-clear-bundles');
+
+        if (!button || button.dataset.optimizeBound === '1') {
+            return;
+        }
+
+        button.dataset.optimizeBound = '1';
+
+        button.addEventListener('click', function () {
+            var formData = new FormData();
+            formData.append('action', 'clear_bundles');
+
+            button.disabled = true;
+
+            postOptimize(formData)
+                .then(function (data) {
+                    if (!data || data.status !== 'ok') {
+                        alert(data && data.message ? data.message : 'Ошибка очистки бандлов');
+                        return;
+                    }
+
+                    updateStats(data.stats);
+                    alert(data.message + ': ' + data.deleted);
+                })
+                .catch(function () {
+                    alert('Ошибка AJAX-запроса');
+                })
+                .finally(function () {
+                    button.disabled = false;
+                });
+        });
+    }
+
+    function initOptimizeAdmin() {
+        initOptimizeToggles();
+        initCleanupButton();
+    }
+
+    initOptimizeAdmin();
 
     if (window.jQuery) {
-        jQuery(document).ajaxComplete(initOptimizeToggles);
+        jQuery(document).ajaxComplete(initOptimizeAdmin);
     }
 })();
