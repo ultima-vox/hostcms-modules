@@ -1,35 +1,87 @@
 /* HTML optimizer admin */
 
-.optimize-layout {
+.optimize-status {
+    background: #f7f8fa;
+    border: 1px solid #eceff3;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 0 0 18px;
+}
+
+.optimize-status__title {
+    color: #1f2937;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.optimize-status__grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.optimize-status__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 7px 10px;
+    color: #667085;
+    font-size: 12px;
+}
+
+.optimize-status__item b {
+    font-weight: 600;
+}
+
+.optimize-status__item em {
+    font-style: normal;
+    font-weight: 700;
+}
+
+.optimize-status__item.is-active {
+    border-color: #bbd2ff;
+    background: #eef5ff;
+    color: #245dc1;
+}
+
+.optimize-status__item.is-inactive {
+    opacity: .72;
+}
+
+.optimize-tab-grid {
     display: grid;
-    grid-template-columns: minmax(520px, 1fr) minmax(320px, 420px);
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
     gap: 18px;
     align-items: start;
 }
 
-.optimize-settings-panel,
+.optimize-card,
 .optimize-stats-panel {
     min-width: 0;
+    background: #f7f8fa;
+    border: 1px solid #eceff3;
+    border-radius: 16px;
+    padding: 16px;
 }
 
 .optimize-section-title {
-    margin: 24px 0 12px;
+    margin: 0 0 14px;
     font-size: 16px;
     font-weight: 700;
     color: #1f2937;
 }
 
-.optimize-section-title:first-child {
-    margin-top: 0;
-}
-
 .optimize-switch-field {
     position: relative;
-    background: #f7f8fa;
+    background: #ffffff;
     border: 1px solid #eceff3;
     border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
 }
 
 .optimize-switch-field.is-disabled {
@@ -109,7 +161,7 @@
 }
 
 .optimize-switch-field:hover {
-    background: #f2f5f9;
+    background: #f7fbff;
 }
 
 .optimize-switch-field input.optimize-toggle:disabled ~ span.text {
@@ -118,11 +170,11 @@
 }
 
 .optimize-editor-field {
-    background: #f7f8fa;
+    background: #ffffff;
     border: 1px solid #eceff3;
     border-radius: 14px;
     padding: 16px 18px;
-    margin: 0 0 14px;
+    margin: 0 0 12px;
 }
 
 .optimize-editor-field label {
@@ -168,18 +220,9 @@
     margin: 8px 0 0;
 }
 
-.optimize-stats-panel {
-    position: sticky;
-    top: 18px;
-    background: #f7f8fa;
-    border: 1px solid #eceff3;
-    border-radius: 14px;
-    padding: 16px;
-}
-
 .optimize-stats-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(130px, 1fr));
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
     gap: 12px;
     margin: 0 0 16px;
 }
@@ -213,12 +256,12 @@
 }
 
 @media (max-width: 1100px) {
-    .optimize-layout {
+    .optimize-tab-grid {
         grid-template-columns: 1fr;
     }
 
-    .optimize-stats-panel {
-        position: static;
+    .optimize-stats-grid {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
     }
 }
 
