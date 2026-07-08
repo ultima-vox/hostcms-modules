@@ -71,7 +71,7 @@
 
 .optimize-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    grid-template-columns: repeat(4, minmax(110px, 1fr));
     gap: 12px;
     margin: 0 0 12px;
 }
@@ -105,7 +105,6 @@
     margin: 0;
 }
 
-/* HostCMS tabs polishing */
 form[id^="Form"] > ul.nav-tabs {
     margin-top: 8px;
     border-bottom-color: #dbe3ee;
@@ -125,14 +124,34 @@ form[id^="Form"] > .tab-content {
 
 .optimize-tab-grid {
     display: grid;
-    grid-template-columns: 1fr;
     gap: 16px;
     align-items: start;
-    max-width: 1040px;
+}
+
+.optimize-tab-grid--split {
+    grid-template-columns: minmax(360px, .92fr) minmax(460px, 1.08fr);
+}
+
+.optimize-column {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
 }
 
 .optimize-card {
     padding: 18px;
+}
+
+.optimize-card--editor {
+    align-self: start;
+}
+
+.optimize-card--compact {
+    padding: 10px;
+}
+
+.optimize-card--compact .optimize-switch-field {
+    margin-bottom: 0;
 }
 
 .optimize-section-title {
@@ -269,6 +288,14 @@ form[id^="Form"] > .tab-content {
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, .04);
 }
 
+.optimize-card--editor textarea {
+    min-height: 190px;
+}
+
+.optimize-card--editor .optimize-code-css {
+    min-height: 300px;
+}
+
 .optimize-editor-field textarea:focus {
     border-color: #8fb2ff;
     outline: none;
@@ -286,7 +313,7 @@ form[id^="Form"] > .tab-content {
 .optimize-editor-field .CodeMirror {
     border: 1px solid #cfd8e6;
     border-radius: 12px;
-    min-height: 240px;
+    min-height: 300px;
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, .04);
 }
 
@@ -298,7 +325,8 @@ form[id^="Form"] > .tab-content {
 }
 
 @media (max-width: 1300px) {
-    .optimize-dashboard {
+    .optimize-dashboard,
+    .optimize-tab-grid--split {
         grid-template-columns: 1fr;
     }
 }
