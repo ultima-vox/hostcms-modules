@@ -3,10 +3,10 @@
 defined('HOSTCMS') || exit('HostCMS: access denied.');
 
 /**
- * Optimize module.
+ * HTML optimizer module.
  *
  * @package HostCMS 7\Optimize
- * @version 2.3
+ * @version 2.4
  * @date 2026-07-08
  */
 class Optimize_Module extends Core_Module
@@ -15,7 +15,7 @@ class Optimize_Module extends Core_Module
 	 * Module version
 	 * @var string
 	 */
-	public $version = '2.3';
+	public $version = '2.4';
 
 	/**
 	 * Module date
@@ -24,7 +24,7 @@ class Optimize_Module extends Core_Module
 	public $date = '2026-07-08';
 
 	/**
-	 * Module name
+	 * Module internal name. Do not rename, this is the HostCMS module identifier.
 	 * @var string
 	 */
 	protected $_moduleName = 'optimize';
@@ -46,8 +46,8 @@ class Optimize_Module extends Core_Module
 			array(
 				'sorting' => 3,
 				'block' => 1,
-				'ico' => 'fa fa-magic',
-				'name' => 'Optimize',
+				'ico' => 'fa fa-bolt',
+				'name' => Core::_('Optimize.menu_name'),
 				'href' => '/admin/optimize/index.php',
 				'onclick' => "$.adminLoad({path: '/admin/optimize/index.php'}); return false"
 			)
