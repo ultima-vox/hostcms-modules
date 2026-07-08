@@ -7,7 +7,9 @@ class Optimize_Settings
     protected static $defaults = array(
         'minify_html' => TRUE,
         'combine_css' => TRUE,
+        'minify_css' => FALSE,
         'combine_js'  => TRUE,
+        'minify_js' => FALSE,
         'stats' => array(
             'css_original_bytes' => 0,
             'css_minified_bytes' => 0,
@@ -62,14 +64,16 @@ class Optimize_Settings
         return $data;
     }
 
-    public static function saveToggles($minifyHtml, $combineCss, $combineJs, $siteId = NULL)
+    public static function saveToggles($minifyHtml, $combineCss, $minifyCss, $combineJs, $minifyJs, $siteId = NULL)
     {
         $siteId = is_null($siteId) ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
 
         $data = self::get($siteId);
         $data['minify_html'] = (bool) $minifyHtml;
         $data['combine_css'] = (bool) $combineCss;
+        $data['minify_css'] = (bool) $minifyCss;
         $data['combine_js'] = (bool) $combineJs;
+        $data['minify_js'] = (bool) $minifyJs;
 
         return self::write($siteId, $data);
     }
