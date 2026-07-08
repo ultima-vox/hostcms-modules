@@ -1,4 +1,7 @@
 (function () {
+    var onText = 'Вкл';
+    var offText = 'Выкл';
+
     function updateStats(stats) {
         if (!stats) {
             return;
@@ -9,6 +12,32 @@
 
             if (el) {
                 el.textContent = stats[key];
+            }
+        });
+    }
+
+    function updateStatus(settings) {
+        if (!settings) {
+            settings = {};
+            document.querySelectorAll('input.optimize-toggle[type="checkbox"]').forEach(function (input) {
+                settings[input.name] = input.checked;
+            });
+        }
+
+        Object.keys(settings).forEach(function (key) {
+            var el = document.querySelector('[data-optimize-status="' + key + '"]');
+
+            if (!el) {
+                return;
+            }
+
+            var active = !!settings[key];
+            el.classList.toggle('is-active', active);
+            el.classList.toggle('is-inactive', !active);
+
+            var state = el.querySelector('em');
+            if (state) {
+                state.textContent = active ? onText : offText;
             }
         });
     }
@@ -33,10 +62,11 @@
         var minifyJs = document.querySelector('input.optimize-toggle[name="minify_js"]');
 
         if (settings) {
-            if (typeof settings.combine_css !== 'undefined' && combineCss) combineCss.checked = !!settings.combine_css;
-            if (typeof settings.minify_css !== 'undefined' && minifyCss) minifyCss.checked = !!settings.minify_css;
-            if (typeof settings.combine_js !== 'undefined' && combineJs) combineJs.checked = !!settings.combine_js;
-            if (typeof settings.minify_js !== 'undefined' && minifyJs) minifyJs.checked = !!settings.minify_js;
+            document.querySelectorAll('input.optimize-toggle[type="checkbox"]').forEach(function (input) {
+                if (typeof settings[input.name] !== 'undefined') {
+                    input.checked = !!settings[input.name];
+                }
+            });
         }
 
         if (combineCss && minifyCss) {
@@ -48,6 +78,8 @@
             minifyJs.disabled = !combineJs.checked;
             minifyJs.closest('.optimize-switch-field').classList.toggle('is-disabled', !combineJs.checked);
         }
+
+        updateStatus(settings);
     }
 
     function initOptimizeToggles() {
