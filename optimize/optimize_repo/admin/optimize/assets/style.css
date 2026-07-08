@@ -102,6 +102,25 @@
     cursor: wait;
 }
 
+.optimize-cleanup {
+    background: #f7f8fa;
+    border: 1px dashed #d8dee8;
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: 2px;
+}
+
+.optimize-clear-bundles {
+    margin-bottom: 8px;
+}
+
+.optimize-cleanup p {
+    color: #667085;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
 .optimize-stats-panel {
     background: #f7f8fa;
     border: 1px solid #eceff3;
