@@ -53,16 +53,6 @@ $oMainTab
     ->add(
         Admin_Form_Entity::factory('Div')->class('row')->add(
             Admin_Form_Entity::factory('Checkbox')
-                ->name('enabled')
-                ->class('optimize-toggle')
-                ->value(!empty($settings['enabled']) ? 1 : 0)
-                ->caption('Включить модуль Optimize')
-                ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
-        )
-    )
-    ->add(
-        Admin_Form_Entity::factory('Div')->class('row')->add(
-            Admin_Form_Entity::factory('Checkbox')
                 ->name('minify_html')
                 ->class('optimize-toggle')
                 ->value(!empty($settings['minify_html']) ? 1 : 0)
