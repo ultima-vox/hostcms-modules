@@ -62,14 +62,21 @@ $statusItems = array(
     'preconnect_enabled' => Core::_('Optimize.preconnect_enabled')
 );
 
-$sStatusHtml = '<div class="optimize-status"><div class="optimize-status__title">' . htmlspecialchars(Core::_('Optimize.status_title'), ENT_QUOTES) . '</div><div class="optimize-status__grid">';
+$sStatusHtml = '<div class="optimize-dashboard"><div class="optimize-status"><div class="optimize-status__title">' . htmlspecialchars(Core::_('Optimize.status_title'), ENT_QUOTES) . '</div><div class="optimize-status__grid">';
 foreach ($statusItems as $key => $label) {
     $active = !empty($settings[$key]);
     $sStatusHtml .= '<span class="optimize-status__item ' . ($active ? 'is-active' : 'is-inactive') . '" data-optimize-status="' . htmlspecialchars($key, ENT_QUOTES) . '"><b>' . htmlspecialchars($label, ENT_QUOTES) . '</b><em>' . htmlspecialchars($active ? Core::_('Optimize.status_on') : Core::_('Optimize.status_off'), ENT_QUOTES) . '</em></span>';
 }
 $sStatusHtml .= '</div></div>';
 
-$oAdmin_Form_Entity_Form->add(Admin_Form_Entity::factory('Code')->html($sStatusHtml));
+$sStatsHtml = '<div class="optimize-stats-panel"><div class="optimize-stats-grid">'
+    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
+    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
+    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
+    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
+    . '</div><p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p></div></div>';
+
+$oAdmin_Form_Entity_Form->add(Admin_Form_Entity::factory('Code')->html($sStatusHtml . $sStatsHtml));
 
 $oOptimizeTab = Admin_Form_Entity::factory('Tab')
     ->name('optimize')
@@ -214,25 +221,11 @@ $oNetworkTab
         '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.preconnect'), ENT_QUOTES) . '</label><textarea name="preconnect" class="optimize-setting-text" rows="4">' . htmlspecialchars($settings['preconnect'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.resource_hint_hint'), ENT_QUOTES) . '</p></div></div></div>'
     ));
 
-$oStatsTab = Admin_Form_Entity::factory('Tab')
-    ->name('stats')
-    ->caption(Core::_('Optimize.tab_stats'));
-
-$oStatsTab->add(Admin_Form_Entity::factory('Code')->html(
-    '<div class="optimize-stats-panel"><div class="optimize-stats-grid">'
-    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
-    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
-    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
-    . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
-    . '</div><p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p></div>'
-));
-
 $oTabs = Admin_Form_Entity::factory('Tabs');
 $oTabs
     ->add($oOptimizeTab)
     ->add($oResourcesTab)
-    ->add($oNetworkTab)
-    ->add($oStatsTab);
+    ->add($oNetworkTab);
 $oAdmin_Form_Entity_Form->add($oTabs);
 
 $sCssFile = CMS_FOLDER . 'admin/optimize/assets/style.css';
