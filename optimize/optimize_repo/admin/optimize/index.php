@@ -5,11 +5,13 @@ require_once('../../bootstrap.php');
 Core_Auth::authorization($sModule = 'optimize');
 
 $sAdminFormAction = '/admin/optimize/index.php';
+$sTitle = Core::_('Optimize.model_name');
+
 $oAdmin_Form = Core_Entity::factory('Admin_Form')->getByGuid('OPTIMIZE-SETTINGS-FORM');
 
 if (!$oAdmin_Form) {
     $oAdmin_Form = Core_Entity::factory('Admin_Form');
-    $oAdmin_Form->name = 'Optimize';
+    $oAdmin_Form->name = $sTitle;
     $oAdmin_Form->guid = 'OPTIMIZE-SETTINGS-FORM';
     $oAdmin_Form->save();
 }
@@ -19,8 +21,8 @@ $oAdmin_Form_Controller
     ->module(Core_Module::factory($sModule))
     ->setUp()
     ->path($sAdminFormAction)
-    ->title('Optimize')
-    ->pageTitle('Optimize');
+    ->title($sTitle)
+    ->pageTitle($sTitle);
 
 $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
 $settings = Optimize_Settings::get($siteId);
@@ -29,7 +31,7 @@ $statsSummary = Optimize_Settings::getStatsSummary($siteId);
 $oAdmin_Form_Entity_Breadcrumbs = Admin_Form_Entity::factory('Breadcrumbs');
 $oAdmin_Form_Entity_Breadcrumbs->add(
     Admin_Form_Entity::factory('Breadcrumb')
-        ->name('Optimize')
+        ->name($sTitle)
         ->href($oAdmin_Form_Controller->getAdminLoadHref($oAdmin_Form_Controller->getPath(), NULL, NULL, ''))
         ->onclick($oAdmin_Form_Controller->getAdminLoadAjax($oAdmin_Form_Controller->getPath(), NULL, NULL, ''))
 );
@@ -38,7 +40,7 @@ $oAdmin_Form_Controller->addEntity($oAdmin_Form_Entity_Breadcrumbs);
 $oAdmin_View = Admin_View::create();
 $oAdmin_View
     ->module(Core_Module::factory($sModule))
-    ->pageTitle('Optimize');
+    ->pageTitle($sTitle);
 
 $oAdmin_Form_Entity_Form = Admin_Form_Entity::factory('Form')
     ->controller($oAdmin_Form_Controller)
@@ -47,7 +49,7 @@ $oAdmin_Form_Entity_Form = Admin_Form_Entity::factory('Form')
 
 $oMainTab = Admin_Form_Entity::factory('Tab')
     ->name('main')
-    ->caption('Настройки');
+    ->caption(Core::_('Optimize.settings_tab'));
 
 $oMainTab
     ->add(
@@ -56,7 +58,7 @@ $oMainTab
                 ->name('minify_html')
                 ->class('optimize-toggle')
                 ->value(!empty($settings['minify_html']) ? 1 : 0)
-                ->caption('Минифицировать HTML')
+                ->caption(Core::_('Optimize.minify_html'))
                 ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
         )
     )
@@ -66,7 +68,7 @@ $oMainTab
                 ->name('combine_css')
                 ->class('optimize-toggle')
                 ->value(!empty($settings['combine_css']) ? 1 : 0)
-                ->caption('Объединять и минифицировать локальные CSS-файлы')
+                ->caption(Core::_('Optimize.combine_css'))
                 ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
         )
     )
@@ -76,19 +78,19 @@ $oMainTab
                 ->name('combine_js')
                 ->class('optimize-toggle')
                 ->value(!empty($settings['combine_js']) ? 1 : 0)
-                ->caption('Объединять локальные JS-файлы')
+                ->caption(Core::_('Optimize.combine_js'))
                 ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
         )
     )
     ->add(
         Admin_Form_Entity::factory('Code')->html(
             '<div class="optimize-stats-grid">'
-            . '<div><span>Всего</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>CSS</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>JS</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
-            . '<div><span>Запросов убрано</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
+            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
+            . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
             . '</div>'
-            . '<p class="optimize-note">Статистика обновляется только при реальной пересборке CSS/JS-бандла.</p>'
+            . '<p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p>'
         )
     );
 
@@ -125,5 +127,5 @@ Core_Skin::instance()
     ->answer()
     ->ajax(Core_Array::getRequest('_', FALSE))
     ->content(ob_get_clean())
-    ->title('Optimize')
+    ->title($sTitle)
     ->execute();
