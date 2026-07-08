@@ -55,6 +55,23 @@
         });
     }
 
+    function refreshOptimizeStats() {
+        var formData = new FormData();
+        formData.append('action', 'stats');
+
+        postOptimize(formData)
+            .then(function (data) {
+                if (!data || data.status !== 'ok') {
+                    return;
+                }
+
+                updateStats(data.stats);
+                updateStatus(data.settings);
+                syncDependentToggles(data.settings);
+            })
+            .catch(function () {});
+    }
+
     function syncDependentToggles(settings) {
         var combineCss = document.querySelector('input.optimize-toggle[name="combine_css"]');
         var minifyCss = document.querySelector('input.optimize-toggle[name="minify_css"]');
@@ -142,6 +159,7 @@
                     return;
                 }
 
+                updateStats(data.stats);
                 textarea.classList.add('is-saved');
                 setTimeout(function () {
                     textarea.classList.remove('is-saved');
@@ -155,6 +173,64 @@
             });
     }
 
+    function initAceEditor(textarea) {
+        if (!window.ace || textarea.dataset.optimizeAce === '1') {
+            return false;
+        }
+
+        textarea.dataset.optimizeAce = '1';
+        textarea.style.display = 'none';
+
+        var holder = document.createElement('div');
+        holder.className = 'optimize-ace ace_editor';
+        holder.textContent = textarea.value;
+        textarea.parentNode.insertBefore(holder, textarea.nextSibling);
+
+        var editor = window.ace.edit(holder);
+        editor.session.setMode('ace/mode/css');
+        editor.session.setUseWrapMode(true);
+        editor.setShowPrintMargin(false);
+        editor.setOptions({
+            fontSize: '13px',
+            minLines: 18,
+            maxLines: 36
+        });
+
+        editor.on('blur', function () {
+            textarea.value = editor.getValue();
+            if (textarea.value !== textarea.dataset.optimizeValue) {
+                textarea.dataset.optimizeValue = textarea.value;
+                saveTextSetting(textarea);
+            }
+        });
+
+        return true;
+    }
+
+    function initCodeMirrorEditor(textarea) {
+        if (!window.CodeMirror || textarea.dataset.optimizeCodeMirror === '1') {
+            return false;
+        }
+
+        textarea.dataset.optimizeCodeMirror = '1';
+
+        var editor = window.CodeMirror.fromTextArea(textarea, {
+            mode: 'css',
+            lineNumbers: true,
+            lineWrapping: true
+        });
+
+        editor.on('blur', function () {
+            editor.save();
+            if (textarea.value !== textarea.dataset.optimizeValue) {
+                textarea.dataset.optimizeValue = textarea.value;
+                saveTextSetting(textarea);
+            }
+        });
+
+        return true;
+    }
+
     function initTextEditors() {
         var textareas = document.querySelectorAll('textarea.optimize-setting-text');
 
@@ -166,28 +242,18 @@
             textarea.dataset.optimizeBound = '1';
             textarea.dataset.optimizeValue = textarea.value;
 
+            if (textarea.classList.contains('optimize-code-css')) {
+                if (initAceEditor(textarea) || initCodeMirrorEditor(textarea)) {
+                    return;
+                }
+            }
+
             textarea.addEventListener('blur', function () {
                 if (textarea.value !== textarea.dataset.optimizeValue) {
                     textarea.dataset.optimizeValue = textarea.value;
                     saveTextSetting(textarea);
                 }
             });
-
-            if (window.CodeMirror && textarea.classList.contains('optimize-code-css')) {
-                var editor = window.CodeMirror.fromTextArea(textarea, {
-                    mode: 'css',
-                    lineNumbers: true,
-                    lineWrapping: true
-                });
-
-                editor.on('blur', function () {
-                    editor.save();
-                    if (textarea.value !== textarea.dataset.optimizeValue) {
-                        textarea.dataset.optimizeValue = textarea.value;
-                        saveTextSetting(textarea);
-                    }
-                });
-            }
         });
     }
 
@@ -197,6 +263,7 @@
     }
 
     initOptimizeAdmin();
+    refreshOptimizeStats();
 
     if (window.jQuery) {
         jQuery(document).ajaxComplete(initOptimizeAdmin);
