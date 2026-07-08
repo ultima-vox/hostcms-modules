@@ -112,6 +112,24 @@ class Optimize_Settings
         return self::write($siteId, $data);
     }
 
+    public static function resetBundleStats($type = NULL, $siteId = NULL)
+    {
+        $siteId = is_null($siteId) ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
+        $data = self::get($siteId);
+
+        $types = $type === NULL ? array('css', 'js') : array($type);
+
+        foreach ($types as $item) {
+            if (isset($data['stats'][$item . '_original_bytes'])) {
+                $data['stats'][$item . '_original_bytes'] = 0;
+                $data['stats'][$item . '_minified_bytes'] = 0;
+                $data['stats'][$item . '_requests_saved'] = 0;
+            }
+        }
+
+        return self::write($siteId, $data);
+    }
+
     public static function getStatsSummary($siteId = NULL)
     {
         $settings = self::get($siteId);
