@@ -43,12 +43,13 @@ $settings = Optimize_Settings::get($siteId);
 $settings[$name] = (bool) $value;
 
 $result = Optimize_Settings::writePublic($siteId, $settings);
+$deleted = 0;
 
-if ($result && $value === 0) {
-    if ($name === 'combine_css') {
-        Optimize_Assets::clearBundles('css');
-    } elseif ($name === 'combine_js') {
-        Optimize_Assets::clearBundles('js');
+if ($result && $value === 0 && class_exists('Optimize_Assets')) {
+    if ($name === 'combine_css' || $name === 'minify_css') {
+        $deleted = Optimize_Assets::clearBundles('css');
+    } elseif ($name === 'combine_js' || $name === 'minify_js') {
+        $deleted = Optimize_Assets::clearBundles('js');
     }
 }
 
@@ -58,5 +59,6 @@ echo json_encode(array(
     'status' => $result ? 'ok' : 'error',
     'name' => $name,
     'value' => $value,
+    'deleted' => (int) $deleted,
     'stats' => $statsSummary
 ));
