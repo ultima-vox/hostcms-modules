@@ -2,35 +2,11 @@
 
 defined('HOSTCMS') || exit('HostCMS: access denied.');
 
-/**
- * Optimize.
- *
- * Output buffer optimizer: combines local CSS/JS assets and safely minifies
- * plain HTML without touching protected blocks.
- *
- * @package HostCMS 7\Optimize
- * @version 2.2
- */
 class Optimize
 {
-	/**
-	 * Tags whose content must be preserved byte-for-byte.
-	 * @var array<int, string>
-	 */
 	protected static $_protectedTags = array('script', 'style', 'pre', 'textarea');
-
-	/**
-	 * Extracted chunks, keyed by placeholder token.
-	 * @var array<string, string>
-	 */
 	protected static $_vault = array();
 
-	/**
-	 * Optimize an HTML page for output.
-	 *
-	 * @param string $str raw page markup
-	 * @return string optimized markup
-	 */
 	public static function html($str)
 	{
 		self::$_vault = array();
@@ -39,11 +15,11 @@ class Optimize
 		$settings = Optimize_Settings::get($siteId);
 
 		if (!empty($settings['combine_css'])) {
-			$str = Optimize_Assets::combineCss($str, $siteId);
+			$str = Optimize_Assets::combineCss($str, $siteId, !empty($settings['minify_css']));
 		}
 
 		if (!empty($settings['combine_js'])) {
-			$str = Optimize_Assets::combineJs($str, $siteId);
+			$str = Optimize_Assets::combineJs($str, $siteId, !empty($settings['minify_js']));
 		}
 
 		if (empty($settings['minify_html'])) {
@@ -58,12 +34,6 @@ class Optimize
 		return $str;
 	}
 
-	/**
-	 * Replace protected regions with placeholders and store originals.
-	 *
-	 * @param string $str
-	 * @return string
-	 */
 	protected static function _extract($str)
 	{
 		$tagsPattern = implode('|', self::$_protectedTags);
@@ -76,7 +46,6 @@ class Optimize
 			. '#siu';
 
 		return preg_replace_callback($pattern, function ($m) {
-
 			$whole = $m[0];
 			$isPlainComment = substr($whole, 0, 4) === '<!--'
 				&& substr($whole, 4, 4) !== '[if ' && substr($whole, 4, 3) !== '[if';
@@ -85,35 +54,22 @@ class Optimize
 				return '';
 			}
 
-			$token = "\x01OPT" . count(Optimize::$_vault) . "\x02";
+			$token = chr(1) . 'OPT' . count(Optimize::$_vault) . chr(2);
 			Optimize::$_vault[$token] = $whole;
 			return $token;
-
 		}, $str);
 	}
 
-	/**
-	 * Put the protected chunks back into the compressed string.
-	 *
-	 * @param string $str
-	 * @return string
-	 */
 	protected static function _restore($str)
 	{
 		return strtr($str, self::$_vault);
 	}
 
-	/**
-	 * Start buffering the current page through self::html().
-	 */
 	public static function ob()
 	{
 		ob_start(array(__CLASS__, 'html'));
 	}
 
-	/**
-	 * Flush the buffer started by self::ob().
-	 */
 	public static function clean()
 	{
 		if (ob_get_level() > 0) {
