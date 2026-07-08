@@ -83,7 +83,7 @@ $oOptimizeTab = Admin_Form_Entity::factory('Tab')
     ->caption(Core::_('Optimize.tab_optimize'));
 
 $oOptimizeTab
-    ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-tab-grid optimize-tab-grid--split"><div class="optimize-column optimize-column--left">'))
+    ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-tab-grid optimize-tab-grid--split optimize-tab-grid--equal"><div class="optimize-column optimize-column--left">'))
     ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-card"><h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_html'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
@@ -129,7 +129,7 @@ $oOptimizeTab
             ->caption(Core::_('Optimize.minify_js'))
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field optimize-dependent-js'))
     ))
-    ->add(Admin_Form_Entity::factory('Code')->html('</div></div><div class="optimize-column optimize-column--right"><div class="optimize-card optimize-card--editor"><h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.critical_css'), ENT_QUOTES) . '</h3>'))
+    ->add(Admin_Form_Entity::factory('Code')->html('</div></div><div class="optimize-column optimize-column--right"><div class="optimize-card optimize-card--editor optimize-card--critical"><h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.critical_css'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
             ->name('critical_css_enabled')
@@ -139,7 +139,7 @@ $oOptimizeTab
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
     ->add(Admin_Form_Entity::factory('Code')->html(
-        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.critical_css'), ENT_QUOTES) . '</label><textarea name="critical_css" class="optimize-setting-text optimize-code-css" rows="12">' . htmlspecialchars($settings['critical_css'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.critical_css_hint'), ENT_QUOTES) . '</p></div></div></div></div>'
+        '<div class="optimize-editor-field optimize-editor-field--critical"><label>' . htmlspecialchars(Core::_('Optimize.critical_css'), ENT_QUOTES) . '</label><textarea name="critical_css" class="optimize-setting-text optimize-code-css ace_editor" rows="18">' . htmlspecialchars($settings['critical_css'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.critical_css_hint'), ENT_QUOTES) . '</p></div></div></div></div>'
     ));
 
 $oResourcesTab = Admin_Form_Entity::factory('Tab')
@@ -158,8 +158,17 @@ $oResourcesTab
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
     ->add(Admin_Form_Entity::factory('Code')->html(
-        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.preload_fonts'), ENT_QUOTES) . '</label><textarea name="preload_fonts" class="optimize-setting-text" rows="6">' . htmlspecialchars($settings['preload_fonts'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.preload_fonts_hint'), ENT_QUOTES) . '</p></div></div>'
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.preload_fonts'), ENT_QUOTES) . '</label><textarea name="preload_fonts" class="optimize-setting-text" rows="6">' . htmlspecialchars($settings['preload_fonts'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.preload_fonts_hint'), ENT_QUOTES) . '</p></div>'
     ))
+    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
+        Admin_Form_Entity::factory('Checkbox')
+            ->name('rewrite_webp')
+            ->class('optimize-toggle')
+            ->value(!empty($settings['rewrite_webp']) ? 1 : 0)
+            ->caption(Core::_('Optimize.rewrite_webp'))
+            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
+    ))
+    ->add(Admin_Form_Entity::factory('Code')->html('</div>'))
     ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-card optimize-card--editor"><h3 class="optimize-section-title">' . htmlspecialchars(Core::_('Optimize.section_images'), ENT_QUOTES) . '</h3>'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
@@ -170,18 +179,8 @@ $oResourcesTab
             ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
     ))
     ->add(Admin_Form_Entity::factory('Code')->html(
-        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude'), ENT_QUOTES) . '</label><textarea name="lazy_load_exclude" class="optimize-setting-text" rows="6">' . htmlspecialchars($settings['lazy_load_exclude'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude_hint'), ENT_QUOTES) . '</p></div></div>'
+        '<div class="optimize-editor-field"><label>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude'), ENT_QUOTES) . '</label><textarea name="lazy_load_exclude" class="optimize-setting-text" rows="6">' . htmlspecialchars($settings['lazy_load_exclude'], ENT_QUOTES) . '</textarea><p>' . htmlspecialchars(Core::_('Optimize.lazy_load_exclude_hint'), ENT_QUOTES) . '</p></div>'
     ))
-    ->add(Admin_Form_Entity::factory('Code')->html('<div class="optimize-card optimize-card--compact">'))
-    ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
-        Admin_Form_Entity::factory('Checkbox')
-            ->name('rewrite_webp')
-            ->class('optimize-toggle')
-            ->value(!empty($settings['rewrite_webp']) ? 1 : 0)
-            ->caption(Core::_('Optimize.rewrite_webp'))
-            ->divAttr(array('class' => 'form-group col-xs-12 optimize-switch-field'))
-    ))
-    ->add(Admin_Form_Entity::factory('Code')->html('</div><div class="optimize-card optimize-card--compact">'))
     ->add(Admin_Form_Entity::factory('Div')->class('row')->add(
         Admin_Form_Entity::factory('Checkbox')
             ->name('rewrite_avif')
