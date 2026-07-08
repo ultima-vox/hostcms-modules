@@ -9,7 +9,7 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
  * plain HTML without touching protected blocks.
  *
  * @package HostCMS 7\Optimize
- * @version 2.1
+ * @version 2.2
  */
 class Optimize
 {
@@ -37,10 +37,6 @@ class Optimize
 
 		$siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
 		$settings = Optimize_Settings::get($siteId);
-
-		if (empty($settings['enabled'])) {
-			return $str;
-		}
 
 		if (!empty($settings['combine_css'])) {
 			$str = Optimize_Assets::combineCss($str, $siteId);
