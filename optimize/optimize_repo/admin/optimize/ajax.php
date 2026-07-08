@@ -36,6 +36,15 @@ $name = Core_Array::getPost('name', '');
 $settings = Optimize_Settings::get($siteId);
 $deleted = 0;
 
+if ($action === 'stats') {
+    echo json_encode(array(
+        'status' => 'ok',
+        'settings' => Optimize_Settings::get($siteId),
+        'stats' => Optimize_Settings::getStatsSummary($siteId)
+    ));
+    exit;
+}
+
 if ($action === 'text') {
     if (!in_array($name, $textSettings, TRUE)) {
         echo json_encode(array('status' => 'error', 'message' => Core::_('Optimize.invalid_setting')));
@@ -66,8 +75,10 @@ if ($action === 'text') {
     if ($result && !$value && class_exists('Optimize_Assets')) {
         if ($name === 'combine_css' || $name === 'minify_css') {
             $deleted = Optimize_Assets::clearBundles('css');
+            Optimize_Settings::resetBundleStats('css', $siteId);
         } elseif ($name === 'combine_js' || $name === 'minify_js') {
             $deleted = Optimize_Assets::clearBundles('js');
+            Optimize_Settings::resetBundleStats('js', $siteId);
         }
     }
 }
