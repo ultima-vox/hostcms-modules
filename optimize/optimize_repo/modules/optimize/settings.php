@@ -5,7 +5,6 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 class Optimize_Settings
 {
     protected static $defaults = array(
-        'enabled' => TRUE,
         'minify_html' => TRUE,
         'combine_css' => TRUE,
         'combine_js'  => TRUE,
@@ -52,6 +51,7 @@ class Optimize_Settings
 
             if (is_array($decoded)) {
                 $data = array_merge($data, $decoded);
+                unset($data['enabled']);
                 $data['stats'] = array_merge(
                     self::$defaults['stats'],
                     (isset($decoded['stats']) && is_array($decoded['stats'])) ? $decoded['stats'] : array()
@@ -62,12 +62,11 @@ class Optimize_Settings
         return $data;
     }
 
-    public static function saveToggles($enabled, $minifyHtml, $combineCss, $combineJs, $siteId = NULL)
+    public static function saveToggles($minifyHtml, $combineCss, $combineJs, $siteId = NULL)
     {
         $siteId = is_null($siteId) ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
 
         $data = self::get($siteId);
-        $data['enabled'] = (bool) $enabled;
         $data['minify_html'] = (bool) $minifyHtml;
         $data['combine_css'] = (bool) $combineCss;
         $data['combine_js'] = (bool) $combineJs;
@@ -77,6 +76,7 @@ class Optimize_Settings
 
     public static function writePublic($siteId, $data)
     {
+        unset($data['enabled']);
         return self::write($siteId, $data);
     }
 
@@ -138,6 +138,8 @@ class Optimize_Settings
         if (!self::ensureDir()) {
             return FALSE;
         }
+
+        unset($data['enabled']);
 
         $fp = fopen(self::path($siteId), 'c+');
 
