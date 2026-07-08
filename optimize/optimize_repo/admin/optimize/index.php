@@ -53,6 +53,11 @@ $oMainTab = Admin_Form_Entity::factory('Tab')
 
 $oMainTab
     ->add(
+        Admin_Form_Entity::factory('Code')->html(
+            '<div class="optimize-layout"><div class="optimize-settings-panel">'
+        )
+    )
+    ->add(
         Admin_Form_Entity::factory('Div')->class('row')->add(
             Admin_Form_Entity::factory('Checkbox')
                 ->name('minify_html')
@@ -84,13 +89,15 @@ $oMainTab
     )
     ->add(
         Admin_Form_Entity::factory('Code')->html(
-            '<div class="optimize-stats-grid">'
+            '</div><aside class="optimize-stats-panel">'
+            . '<div class="optimize-stats-grid">'
             . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_total'), ENT_QUOTES) . '</span><strong data-optimize-stat="total">' . htmlspecialchars($statsSummary['total'], ENT_QUOTES) . '</strong></div>'
             . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_css'), ENT_QUOTES) . '</span><strong data-optimize-stat="css">' . htmlspecialchars($statsSummary['css'], ENT_QUOTES) . '</strong></div>'
             . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_js'), ENT_QUOTES) . '</span><strong data-optimize-stat="js">' . htmlspecialchars($statsSummary['js'], ENT_QUOTES) . '</strong></div>'
             . '<div><span>' . htmlspecialchars(Core::_('Optimize.stats_requests'), ENT_QUOTES) . '</span><strong data-optimize-stat="requests">' . (int) $statsSummary['requests'] . '</strong></div>'
             . '</div>'
             . '<p class="optimize-note">' . htmlspecialchars(Core::_('Optimize.stats_note'), ENT_QUOTES) . '</p>'
+            . '</aside></div>'
         )
     );
 
