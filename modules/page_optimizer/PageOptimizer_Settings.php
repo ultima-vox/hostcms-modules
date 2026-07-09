@@ -8,6 +8,7 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 class PageOptimizer_Settings
 {
     protected static $defaults = [
+        'config_version'         => 2,
         'minify_html'           => false,
         'combine_css'           => false,
         'minify_css'            => false,
@@ -63,6 +64,7 @@ class PageOptimizer_Settings
         if (is_file($file)) {
             $decoded = json_decode(file_get_contents($file), true);
             if (is_array($decoded)) {
+                $decoded = self::migrateLegacySettings($decoded);
                 $data = array_merge($data, $decoded);
                 if (isset($data['stats']) && is_array($data['stats'])) {
                     $data['stats'] = array_merge(self::$defaults['stats'], $data['stats']);
@@ -73,9 +75,37 @@ class PageOptimizer_Settings
         return $data;
     }
 
+    protected static function migrateLegacySettings(array $data)
+    {
+        if (($data['config_version'] ?? 1) >= self::$defaults['config_version']) {
+            return $data;
+        }
+
+        // Legacy MVP builds enabled aggressive optimizations by default.
+        // During migration we intentionally disable all transformations,
+        // so the module becomes safe before features are enabled manually.
+        foreach ([
+            'minify_html',
+            'combine_css',
+            'minify_css',
+            'combine_js',
+            'minify_js',
+            'lazy_load_images',
+            'rewrite_avif',
+            'rewrite_webp',
+        ] as $key) {
+            $data[$key] = false;
+        }
+
+        $data['config_version'] = self::$defaults['config_version'];
+
+        return $data;
+    }
+
     public static function save($data, $siteId = null)
     {
         $siteId = $siteId ?? (defined('CURRENT_SITE') ? CURRENT_SITE : 0);
+        $data['config_version'] = self::$defaults['config_version'];
 
         if (!self::ensureDir()) {
             return false;
