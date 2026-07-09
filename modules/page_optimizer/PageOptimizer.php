@@ -9,22 +9,22 @@ class PageOptimizer
 {
     public static function process($html)
     {
-        if (empty($html) || !is_string($html)) {
+        if (!PageOptimizer_Context::shouldProcess($html)) {
             return $html;
         }
 
-        // TODO: Replace with PageOptimizer_Settings::get() later
-        $settings = self::getDefaultSettings();
+        $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
+        $settings = PageOptimizer_Settings::get($siteId);
 
         $html = self::injectHead($html, $settings);
         $html = self::optimizeImages($html, $settings);
 
         if (!empty($settings['combine_css'])) {
-            $html = PageOptimizer_Assets::combineCss($html, CURRENT_SITE, !empty($settings['minify_css']));
+            $html = PageOptimizer_Assets::combineCss($html, $siteId, !empty($settings['minify_css']));
         }
 
         if (!empty($settings['combine_js'])) {
-            $html = PageOptimizer_Assets::combineJs($html, CURRENT_SITE, !empty($settings['minify_js']));
+            $html = PageOptimizer_Assets::combineJs($html, $siteId, !empty($settings['minify_js']));
         }
 
         if (!empty($settings['minify_html'])) {
@@ -32,25 +32,6 @@ class PageOptimizer
         }
 
         return $html;
-    }
-
-    protected static function getDefaultSettings()
-    {
-        return [
-            'minify_html'           => true,
-            'combine_css'           => true,
-            'minify_css'            => false,
-            'combine_js'            => true,
-            'minify_js'             => false,
-            'lazy_load_images'      => true,
-            'rewrite_avif'          => false,
-            'rewrite_webp'          => false,
-            'dns_prefetch_enabled'  => false,
-            'preconnect_enabled'    => false,
-            'preload_fonts_enabled' => false,
-            'critical_css_enabled'  => false,
-            'critical_css'          => '',
-        ];
     }
 
     protected static function injectHead($html, $settings)
