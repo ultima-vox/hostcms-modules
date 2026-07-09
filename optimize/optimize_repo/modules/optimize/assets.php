@@ -162,7 +162,7 @@ class Optimize_Assets
     protected static function rewriteCssUrls($css, $baseDir)
     {
         return preg_replace_callback(
-            '/url\(\s*([\'\"]?)(?!(?:https?:)?\/\/|data:)([^\'\")]+)\1\s*\)/i',
+            '/url\(\s*([\'\"]?)(?!(?:https?:)?\/\/|data:|#)([^\'\")]+)\1\s*\)/i',
             function ($m) use ($baseDir) {
                 $quote = $m[1];
                 $path = trim($m[2]);
