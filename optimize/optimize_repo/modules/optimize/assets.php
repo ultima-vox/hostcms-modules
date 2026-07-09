@@ -26,10 +26,14 @@ class Optimize_Assets
         $patterns = array();
 
         if ($type === 'css') {
-            $patterns[] = 'bundle_*.css';
+            $patterns[] = 'combine*.css';
+            $patterns[] = 'bundle_*.css'; // backward compatibility
         } elseif ($type === 'js') {
+            $patterns[] = 'combine*.js';
             $patterns[] = 'bundle_*.js';
         } else {
+            $patterns[] = 'combine*.css';
+            $patterns[] = 'combine*.js';
             $patterns[] = 'bundle_*.css';
             $patterns[] = 'bundle_*.js';
         }
@@ -122,7 +126,7 @@ class Optimize_Assets
             return $out;
         }
 
-        list($cacheFile, $cacheUrl) = $info;
+        list($cacheFile, $cacheUrlWithQuery) = $info;
 
         if (!is_file($cacheFile)) {
             $originalSize = 0;
@@ -132,7 +136,7 @@ class Optimize_Assets
                 $css = file_get_contents($f['path']);
                 $originalSize += strlen($css);
                 $css = self::rewriteCssUrls($css, dirname($f['href']));
-                $css = $minify ? self::minifyCss($css) : trim($css);
+                $css = $minify ? self::minifyCssImproved($css) : trim($css);
                 $combined .= '/* ' . $f['href'] . " */\n" . $css . "\n";
             }
 
@@ -148,21 +152,33 @@ class Optimize_Assets
         }
 
         $mediaAttr = ($media && $media !== 'all') ? ' media="' . htmlspecialchars($media, ENT_QUOTES) . '"' : '';
-        return '<link rel="stylesheet" href="' . $cacheUrl . '"' . $mediaAttr . '>';
+        return '<link rel="stylesheet" href="' . $cacheUrlWithQuery . '"' . $mediaAttr . '>';
     }
 
-    protected static function minifyCss($css)
+    protected static function minifyCssImproved($css)
     {
+        // Remove comments
         $css = preg_replace('#/\*.*?\*/#s', '', $css);
+
+        // Remove whitespace
         $css = preg_replace('/\s+/', ' ', $css);
+
+        // Optimize common patterns
         $css = preg_replace('/\s*([{}:;,>])\s*/', '$1', $css);
+        $css = preg_replace('/;}/', '}', $css);
+        $css = preg_replace('/([:,])\s+/', '$1', $css);
+
+        // Remove units from zero values
+        $css = preg_replace('/\b0(px|em|rem|%|vh|vw)\b/', '0', $css);
+
         return trim($css);
     }
 
     protected static function rewriteCssUrls($css, $baseDir)
     {
+        // More robust regex for url()
         return preg_replace_callback(
-            '/url\(\s*([\'\"]?)(?!(?:https?:)?\/\/|data:|#)([^\'\")]+)\1\s*\)/i',
+            '/url\(\s*([\'"]?)(?!(?:https?:)?\/\/|data:|#|%23)([^\'"\)]+?)\1\s*\)/i',
             function ($m) use ($baseDir) {
                 $quote = $m[1];
                 $path = trim($m[2]);
@@ -171,7 +187,8 @@ class Optimize_Assets
                     return 'url(' . $quote . $path . $quote . ')';
                 }
 
-                return 'url(' . $quote . self::resolvePath($baseDir, $path) . $quote . ')';
+                $resolved = self::resolvePath($baseDir, $path);
+                return 'url(' . $quote . $resolved . $quote . ')';
             },
             $css
         );
@@ -240,7 +257,7 @@ class Optimize_Assets
             return $out;
         }
 
-        list($cacheFile, $cacheUrl) = $info;
+        list($cacheFile, $cacheUrlWithQuery) = $info;
 
         if (!is_file($cacheFile)) {
             $originalSize = 0;
@@ -249,7 +266,7 @@ class Optimize_Assets
             foreach ($files as $f) {
                 $js = file_get_contents($f['path']);
                 $originalSize += strlen($js);
-                $js = $minify ? self::minifyJs($js) : rtrim($js);
+                $js = $minify ? self::minifyJsImproved($js) : rtrim($js);
                 $combined .= '/* ' . $f['href'] . " */\n" . $js . "\n;\n";
             }
 
@@ -264,10 +281,10 @@ class Optimize_Assets
             }
         }
 
-        return '<script src="' . $cacheUrl . '"></script>';
+        return '<script src="' . $cacheUrlWithQuery . '"></script>';
     }
 
-    protected static function minifyJs($code)
+    protected static function minifyJsImproved($code)
     {
         $lines = preg_split('/\r\n|\r|\n/', $code);
         $out = array();
@@ -307,6 +324,7 @@ class Optimize_Assets
                 continue;
             }
 
+            // Remove trailing semicolons before newlines in some cases (light)
             $out[] = $trimmed;
         }
 
@@ -376,9 +394,13 @@ class Optimize_Assets
             $sig .= $f['path'] . '|' . @filemtime($f['path']) . ';';
         }
 
-        $hash = substr(md5($sig), 0, 16);
-        $filename = 'bundle_' . $ext . '_' . $mode . '_' . $hash . '.' . $ext;
+        $hash = substr(md5($sig), 0, 12);
 
-        return array($dir . $filename, self::cacheUrl() . $filename);
+        // Clean name + query string for cache busting
+        $baseName = 'combine' . ($mode === 'min' ? '.min' : '') . '.' . $ext;
+        $filename = $baseName;
+        $cacheUrl = self::cacheUrl() . $filename . '?v=' . $hash;
+
+        return array($dir . $filename, $cacheUrl);
     }
 }
