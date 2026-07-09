@@ -8,12 +8,12 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 class PageOptimizer_Settings
 {
     protected static $defaults = [
-        'minify_html'           => true,
-        'combine_css'           => true,
+        'minify_html'           => false,
+        'combine_css'           => false,
         'minify_css'            => false,
-        'combine_js'            => true,
+        'combine_js'            => false,
         'minify_js'             => false,
-        'lazy_load_images'      => true,
+        'lazy_load_images'      => false,
         'rewrite_avif'          => false,
         'rewrite_webp'          => false,
         'dns_prefetch_enabled'  => false,
