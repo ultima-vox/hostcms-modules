@@ -2,12 +2,18 @@
 
 defined('HOSTCMS') || exit('HostCMS: access denied.');
 
+require_once __DIR__ . '/PageOptimizer_Context.php';
+require_once __DIR__ . '/PageOptimizer_Settings.php';
+require_once __DIR__ . '/PageOptimizer_Assets.php';
+require_once __DIR__ . '/PageOptimizer_Html.php';
+require_once __DIR__ . '/PageOptimizer.php';
+
 /**
  * Page Optimizer Module for HostCMS 7.
  */
 class PageOptimizer_Module extends Core_Module
 {
-    public $version = '1.1';
+    public $version = '1.1.1';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'page_optimizer';
