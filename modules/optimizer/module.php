@@ -13,7 +13,7 @@ require_once __DIR__ . '/Optimizer.php';
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.5.3';
+    public $version = '1.5.4';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
@@ -33,34 +33,11 @@ class Optimizer_Module extends Core_Module_Abstract
             )
         );
 
-        Core_Event::attach('onAfterShowTemplate', array($this, 'onAfterShowTemplate'));
-    }
-
-    public function onAfterShowTemplate($args)
-    {
-        if (!Core::moduleIsActive($this->_moduleName)) {
-            return;
-        }
-
-        $response = Core_Response::instance();
-        $html = method_exists($response, 'getBody') ? $response->getBody() : null;
-
-        if (!is_string($html) || $html === '') {
-            return;
-        }
-
-        if (method_exists($response, 'setBody')) {
-            $response->setBody(Optimizer::process($html));
+        if (Core::moduleIsActive($this->_moduleName)) {
+            Optimizer::startOutputBuffer();
         }
     }
 
-    /**
-     * Install module.
-     *
-     * HostCMS can invoke this method in a context where helper classes from the
-     * module file have not yet been loaded, so the dependency is required here
-     * explicitly before use.
-     */
     public function install()
     {
         if (!class_exists('Optimizer_Settings', false)) {
