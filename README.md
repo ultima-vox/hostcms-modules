@@ -19,6 +19,10 @@
 
 ## История изменений
 
+### v1.3.2 (2026-07-10)
+- Админка `admin/page_optimizer/index.php` переведена на автозагрузку HostCMS
+- Удалён `require_once CMS_FOLDER ...` для `PageOptimizer_Settings`
+
 ### v1.3.1 (2026-07-10)
 - Удалён дублирующий файл `PageOptimizer_Controller_Edit.php`
 - Структура модуля теперь полностью чистая и соответствует документации
