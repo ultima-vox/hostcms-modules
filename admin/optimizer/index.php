@@ -40,7 +40,12 @@ $booleanKeys = array(
     'critical_css_enabled'
 );
 
+$integerKeys = array(
+    'lazy_load_skip_first'
+);
+
 $textKeys = array(
+    'image_exclude_classes',
     'dns_prefetch',
     'preconnect',
     'preload_fonts',
@@ -62,7 +67,9 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
         exit;
     }
 
-    if (!in_array($name, $booleanKeys, true) && !in_array($name, $textKeys, true)) {
+    if (!in_array($name, $booleanKeys, true)
+        && !in_array($name, $integerKeys, true)
+        && !in_array($name, $textKeys, true)) {
         echo json_encode(array(
             'success' => false,
             'message' => Core::_('Optimizer.messages_save_error')
@@ -74,6 +81,9 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
 
     if (in_array($name, $booleanKeys, true)) {
         $settings[$name] = (bool) ((int) $value);
+    }
+    elseif (in_array($name, $integerKeys, true)) {
+        $settings[$name] = max(0, min(20, (int) $value));
     }
     else {
         $settings[$name] = trim((string) $value);
@@ -98,7 +108,8 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
         'enabledCount' => $enabledCount,
         'mode' => $enabledCount === 0
             ? Core::_('Optimizer.safe_mode')
-            : Core::_('Optimizer.custom_mode')
+            : Core::_('Optimizer.custom_mode'),
+        'value' => isset($settings[$name]) ? $settings[$name] : null
     ), JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -179,21 +190,43 @@ function optimizerAddCheckbox($tab, $name, $caption, array $settings, $class = '
     );
 }
 
-function optimizerAddTextarea($tab, $name, $caption, array $settings, $rows = 5)
+function optimizerAddTextarea($tab, $name, $caption, array $settings, $rows = 5, $hint = '')
 {
-    $tab->add(
-        Admin_Form_Entity::factory('Code')->html(
-            '<div class="form-group">'
-            . '<label for="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
-            . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8')
-            . '</label>'
-            . '<textarea class="form-control optimizer-live-setting" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
-            . '" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
-            . '" rows="' . (int) $rows . '">'
-            . htmlspecialchars(isset($settings[$name]) ? $settings[$name] : '', ENT_QUOTES, 'UTF-8')
-            . '</textarea></div>'
-        )
-    );
+    $html = '<div class="form-group">'
+        . '<label for="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8')
+        . '</label>'
+        . '<textarea class="form-control optimizer-live-setting" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" rows="' . (int) $rows . '">'
+        . htmlspecialchars(isset($settings[$name]) ? $settings[$name] : '', ENT_QUOTES, 'UTF-8')
+        . '</textarea>';
+
+    if ($hint !== '') {
+        $html .= '<p class="help-block">' . htmlspecialchars($hint, ENT_QUOTES, 'UTF-8') . '</p>';
+    }
+
+    $html .= '</div>';
+    $tab->add(Admin_Form_Entity::factory('Code')->html($html));
+}
+
+function optimizerAddNumber($tab, $name, $caption, array $settings, $min, $max, $hint = '')
+{
+    $html = '<div class="form-group">'
+        . '<label for="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8')
+        . '</label>'
+        . '<input type="number" class="form-control optimizer-live-setting" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" min="' . (int) $min . '" max="' . (int) $max . '" value="'
+        . (int) (isset($settings[$name]) ? $settings[$name] : $min) . '">';
+
+    if ($hint !== '') {
+        $html .= '<p class="help-block">' . htmlspecialchars($hint, ENT_QUOTES, 'UTF-8') . '</p>';
+    }
+
+    $html .= '</div>';
+    $tab->add(Admin_Form_Entity::factory('Code')->html($html));
 }
 
 $oMainTab = Admin_Form_Entity::factory('Tab')
@@ -218,6 +251,23 @@ $oImagesTab = Admin_Form_Entity::factory('Tab')
     ->caption(Core::_('Optimizer.tab_images'));
 $oImagesTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_images'), ENT_QUOTES, 'UTF-8') . '</h4>'));
 optimizerAddCheckbox($oImagesTab, 'lazy_load_images', Core::_('Optimizer.lazy_load_images'), $settings);
+optimizerAddNumber(
+    $oImagesTab,
+    'lazy_load_skip_first',
+    Core::_('Optimizer.lazy_load_skip_first'),
+    $settings,
+    0,
+    20,
+    Core::_('Optimizer.lazy_load_skip_first_hint')
+);
+optimizerAddTextarea(
+    $oImagesTab,
+    'image_exclude_classes',
+    Core::_('Optimizer.image_exclude_classes'),
+    $settings,
+    5,
+    Core::_('Optimizer.image_exclude_classes_hint')
+);
 optimizerAddCheckbox($oImagesTab, 'rewrite_webp', Core::_('Optimizer.rewrite_webp'), $settings);
 optimizerAddCheckbox($oImagesTab, 'rewrite_avif', Core::_('Optimizer.rewrite_avif'), $settings);
 
@@ -264,11 +314,12 @@ $script = '<script>(function(){'
     . 'fetch(' . json_encode($ajaxPath) . ',{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},body:body.toString()})'
     . '.then(function(response){if(!response.ok){throw new Error("HTTP "+response.status);}return response.json();})'
     . '.then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}'
+    . 'if(field.type==="number"&&data.value!==null){field.value=data.value;}'
     . 'var mode=root.querySelector("#optimizer-status-mode");var enabled=root.querySelector("#optimizer-status-enabled");if(mode){mode.textContent=data.mode;}if(enabled){enabled.textContent=data.enabledCount;}setStatus(data.message,false);})'
     . '.catch(function(error){setStatus(error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ',true);});'
     . '}'
     . 'root.querySelectorAll("input[type=checkbox][name]").forEach(function(field){field.addEventListener("change",function(){saveField(field);});});'
-    . 'root.querySelectorAll("textarea.optimizer-live-setting[name]").forEach(function(field){field.addEventListener("input",function(){clearTimeout(timers[field.name]);timers[field.name]=setTimeout(function(){saveField(field);},700);});field.addEventListener("blur",function(){clearTimeout(timers[field.name]);saveField(field);});});'
+    . 'root.querySelectorAll(".optimizer-live-setting[name]").forEach(function(field){field.addEventListener("input",function(){clearTimeout(timers[field.name]);timers[field.name]=setTimeout(function(){saveField(field);},700);});field.addEventListener("blur",function(){clearTimeout(timers[field.name]);saveField(field);});});'
     . '})();</script>';
 $oForm->add(Admin_Form_Entity::factory('Code')->html($script));
 
