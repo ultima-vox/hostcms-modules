@@ -10,19 +10,6 @@ function optimizerEscape($value)
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-function optimizerToken()
-{
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        @session_start();
-    }
-
-    if (empty($_SESSION['optimizer_csrf'])) {
-        $_SESSION['optimizer_csrf'] = bin2hex(random_bytes(24));
-    }
-
-    return $_SESSION['optimizer_csrf'];
-}
-
 function optimizerCheckbox($name, $caption, array $settings, $experimental = false)
 {
     $checked = !empty($settings[$name]) ? ' checked="checked"' : '';
@@ -46,38 +33,30 @@ $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
 $message = '';
 $messageType = 'success';
 
-if (strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET') === 'POST') {
-    $token = (string) Core_Array::getPost('csrf_token', '');
+if ((int) Core_Array::getPost('save', 0) === 1) {
+    $settings = Optimizer_Settings::get($siteId);
+    $booleanKeys = array(
+        'minify_html', 'html_remove_comments', 'combine_css', 'minify_css',
+        'combine_js', 'minify_js', 'lazy_load_images', 'rewrite_avif',
+        'rewrite_webp', 'dns_prefetch_enabled', 'preconnect_enabled',
+        'preload_fonts_enabled', 'critical_css_enabled'
+    );
 
-    if ($token === '' || !hash_equals(optimizerToken(), $token)) {
-        $message = Core::_('Optimizer.csrf_error');
-        $messageType = 'danger';
+    foreach ($booleanKeys as $key) {
+        $settings[$key] = (bool) Core_Array::getPost($key, 0);
+    }
+
+    $settings['dns_prefetch'] = trim((string) Core_Array::getPost('dns_prefetch', ''));
+    $settings['preconnect'] = trim((string) Core_Array::getPost('preconnect', ''));
+    $settings['preload_fonts'] = trim((string) Core_Array::getPost('preload_fonts', ''));
+    $settings['critical_css'] = trim((string) Core_Array::getPost('critical_css', ''));
+
+    if (Optimizer_Settings::save($settings, $siteId)) {
+        $message = Core::_('Optimizer.messages_success_save');
     }
     else {
-        $settings = Optimizer_Settings::get($siteId);
-        $booleanKeys = array(
-            'minify_html', 'html_remove_comments', 'combine_css', 'minify_css',
-            'combine_js', 'minify_js', 'lazy_load_images', 'rewrite_avif',
-            'rewrite_webp', 'dns_prefetch_enabled', 'preconnect_enabled',
-            'preload_fonts_enabled', 'critical_css_enabled'
-        );
-
-        foreach ($booleanKeys as $key) {
-            $settings[$key] = (bool) Core_Array::getPost($key, 0);
-        }
-
-        $settings['dns_prefetch'] = trim((string) Core_Array::getPost('dns_prefetch', ''));
-        $settings['preconnect'] = trim((string) Core_Array::getPost('preconnect', ''));
-        $settings['preload_fonts'] = trim((string) Core_Array::getPost('preload_fonts', ''));
-        $settings['critical_css'] = trim((string) Core_Array::getPost('critical_css', ''));
-
-        if (Optimizer_Settings::save($settings, $siteId)) {
-            $message = Core::_('Optimizer.messages_success_save');
-        }
-        else {
-            $message = Core::_('Optimizer.messages_save_error');
-            $messageType = 'danger';
-        }
+        $message = Core::_('Optimizer.messages_save_error');
+        $messageType = 'danger';
     }
 }
 
@@ -107,7 +86,7 @@ echo ' &nbsp; <strong>' . optimizerEscape(Core::_('Optimizer.total_saved')) . ':
 echo '</p>';
 
 echo '<form id="optimizer-form" method="post" action="' . optimizerEscape($path) . '">';
-echo '<input type="hidden" name="csrf_token" value="' . optimizerEscape(optimizerToken()) . '">';
+echo '<input type="hidden" name="save" value="1">';
 echo '<div class="widget flat radius-bordered"><div class="widget-header bg-blue"><span class="widget-caption">' . optimizerEscape(Core::_('Optimizer.tab_main')) . '</span></div><div class="widget-body">';
 echo '<div class="row"><div class="col-md-6">';
 optimizerCheckbox('minify_html', Core::_('Optimizer.minify_html'), $settings);
@@ -131,5 +110,6 @@ optimizerCheckbox('critical_css_enabled', Core::_('Optimizer.critical_css_enable
 optimizerTextarea('critical_css', Core::_('Optimizer.critical_css'), $settings, 8);
 echo '<button type="submit" class="btn btn-blue"><i class="fa fa-save"></i> ' . optimizerEscape(Core::_('Optimizer.save')) . '</button>';
 echo '</div></div></form>';
-echo '<script>$(function(){var f=$("#optimizer-form");f.off("submit.optimizer").on("submit.optimizer",function(e){e.preventDefault();$.post(f.attr("action"),f.serialize(),function(html){var r=$("<div>").html(html).find("#optimizer-content");if(r.length){$("#optimizer-content").replaceWith(r);}});});});</script>';
+
+echo '<script>$(function(){var f=$("#optimizer-form");f.off("submit.optimizer").on("submit.optimizer",function(e){e.preventDefault();mainFormLocker.unlock();$.adminLoad({path:' . json_encode($path) . ',additionalParams:f.serialize(),windowId:"id_content"});return false;});});</script>';
 echo '</div></div>';
