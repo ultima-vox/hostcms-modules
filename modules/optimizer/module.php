@@ -13,7 +13,7 @@ require_once __DIR__ . '/Optimizer.php';
  */
 class Optimizer_Module extends Core_Module
 {
-    public $version = '1.5';
+    public $version = '1.5.1';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
@@ -54,16 +54,17 @@ class Optimizer_Module extends Core_Module
         }
     }
 
+    /**
+     * Install module.
+     *
+     * The module has no database entities or mandatory tables. Settings storage
+     * is prepared on a best-effort basis and will also be created lazily on the
+     * first save in the administration section.
+     */
     public function install()
     {
         $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
-
-        if (!Optimizer_Settings::install($siteId)) {
-            throw new Exception(
-                'Optimizer: cannot create writable directory '
-                . Optimizer_Settings::getDirectory()
-            );
-        }
+        Optimizer_Settings::install($siteId);
     }
 
     public function uninstall()
