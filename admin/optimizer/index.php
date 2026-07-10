@@ -23,10 +23,6 @@ $optimizerAjaxToken = (string) $_SESSION['optimizer_ajax_token'];
 $booleanKeys = array(
     'minify_html',
     'html_remove_comments',
-    'combine_css',
-    'minify_css',
-    'combine_js',
-    'minify_js',
     'lazy_load_images',
     'rewrite_avif',
     'rewrite_webp',
@@ -216,7 +212,6 @@ $oAdmin_Form_Controller
     ->pageTitle($sTitle);
 
 $settings = Optimizer_Settings::get($siteId);
-$statsSummary = Optimizer_Settings::getStatsSummary($siteId);
 $imageCapabilities = Optimizer_Image_Generator::getCapabilities();
 
 $oBreadcrumbs = Admin_Form_Entity::factory('Breadcrumbs');
@@ -254,11 +249,7 @@ $statusHtml = '<div class="alert alert-info">'
     . '</span> &nbsp; <strong>'
     . htmlspecialchars(Core::_('Optimizer.status_enabled'), ENT_QUOTES, 'UTF-8')
     . ':</strong> <span id="optimizer-status-enabled">' . (int) $enabledCount
-    . '</span> &nbsp; <strong>'
-    . htmlspecialchars(Core::_('Optimizer.total_saved'), ENT_QUOTES, 'UTF-8')
-    . ':</strong> '
-    . htmlspecialchars($statsSummary['total'], ENT_QUOTES, 'UTF-8')
-    . ' &nbsp; <span id="optimizer-save-status" class="text-muted"></span></p>';
+    . '</span> &nbsp; <span id="optimizer-save-status" class="text-muted"></span></p>';
 
 $oForm->add(Admin_Form_Entity::factory('Code')->html($statusHtml));
 
@@ -321,16 +312,6 @@ $oMainTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchar
 optimizerAddCheckbox($oMainTab, 'minify_html', Core::_('Optimizer.minify_html'), $settings);
 optimizerAddCheckbox($oMainTab, 'html_remove_comments', Core::_('Optimizer.html_remove_comments'), $settings);
 
-$oAssetsTab = Admin_Form_Entity::factory('Tab')
-    ->name('assets')
-    ->caption(Core::_('Optimizer.tab_assets'));
-$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_css'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAssetsTab, 'combine_css', Core::_('Optimizer.combine_css'), $settings);
-optimizerAddCheckbox($oAssetsTab, 'minify_css', Core::_('Optimizer.minify_css'), $settings);
-$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_js'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAssetsTab, 'combine_js', Core::_('Optimizer.combine_js'), $settings);
-optimizerAddCheckbox($oAssetsTab, 'minify_js', Core::_('Optimizer.minify_js'), $settings);
-
 $oImagesTab = Admin_Form_Entity::factory('Tab')
     ->name('images')
     ->caption(Core::_('Optimizer.tab_images'));
@@ -361,15 +342,11 @@ optimizerAddNumber($oImagesTab, 'image_batch_limit', Core::_('Optimizer.image_ba
 optimizerAddNumber($oImagesTab, 'image_max_source_mb', Core::_('Optimizer.image_max_source_mb'), $settings, 1, 200, Core::_('Optimizer.image_max_source_mb_hint'));
 
 $generatorHtml = '<div class="form-group margin-top-20">'
-    . '<button type="button" class="btn btn-blue" id="optimizer-generate-images">'
-    . '<i class="fa fa-picture-o"></i> '
+    . '<button type="button" class="btn btn-blue" id="optimizer-generate-images"><i class="fa fa-picture-o"></i> '
     . htmlspecialchars(Core::_('Optimizer.image_generation_start'), ENT_QUOTES, 'UTF-8')
-    . '</button> '
-    . '<button type="button" class="btn btn-default" id="optimizer-stop-generation" disabled>'
-    . '<i class="fa fa-stop"></i> '
+    . '</button> <button type="button" class="btn btn-default" id="optimizer-stop-generation" disabled><i class="fa fa-stop"></i> '
     . htmlspecialchars(Core::_('Optimizer.image_generation_stop'), ENT_QUOTES, 'UTF-8')
-    . '</button>'
-    . '<div id="optimizer-generation-status" class="alert alert-info margin-top-10">'
+    . '</button><div id="optimizer-generation-status" class="alert alert-info margin-top-10">'
     . htmlspecialchars(Core::_('Optimizer.image_generation_ready'), ENT_QUOTES, 'UTF-8')
     . '</div></div>';
 $oImagesTab->add(Admin_Form_Entity::factory('Code')->html($generatorHtml));
@@ -397,7 +374,6 @@ optimizerAddTextarea($oAdvancedTab, 'critical_css', Core::_('Optimizer.critical_
 $oTabs = Admin_Form_Entity::factory('Tabs');
 $oTabs
     ->add($oMainTab)
-    ->add($oAssetsTab)
     ->add($oImagesTab)
     ->add($oNetworkTab)
     ->add($oAdvancedTab);
