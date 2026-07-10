@@ -1,6 +1,11 @@
 <?php
 
-// Точка входа в административную часть модуля Page Optimizer
+/**
+ * Page Optimizer administration entry point.
+ */
+require_once('../../bootstrap.php');
 
-$oController = new PageOptimizer_Controller_Edit();
+Core_Auth::authorization($sModule = 'page_optimizer');
+
+$oController = new PageOptimizer_Controller_Index();
 $oController->execute();
