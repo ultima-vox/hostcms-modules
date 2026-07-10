@@ -9,15 +9,15 @@ require_once __DIR__ . '/PageOptimizer_Assets.php';
 require_once __DIR__ . '/PageOptimizer.php';
 
 /**
- * Page Optimizer Module for HostCMS 7
+ * Page Optimizer Module for HostCMS 7.
  *
  * @package HostCMS
  * @subpackage PageOptimizer
  */
-class PageOptimizer_Module extends Core_Module_Abstract
+class Page_Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.3';
-    public $date    = '2026-07-10';
+    public $version = '1.4';
+    public $date = '2026-07-10';
 
     protected $_moduleName = 'page_optimizer';
 
@@ -25,18 +25,18 @@ class PageOptimizer_Module extends Core_Module_Abstract
     {
         parent::__construct();
 
-        $this->menu = [
-            [
+        $this->menu = array(
+            array(
                 'sorting' => 10,
-                'block'   => 1,
-                'ico'     => 'fa fa-tachometer',
-                'name'    => Core::_('PageOptimizer.menu_name'),
-                'href'    => Admin_Form_Controller::correctBackendPath('/{admin}/page_optimizer/index.php'),
-                'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/page_optimizer/index.php'}); return false"),
-            ],
-        ];
+                'block' => 1,
+                'ico' => 'fa fa-tachometer',
+                'name' => Core::_('PageOptimizer.menu_name'),
+                'href' => Admin_Form_Controller::correctBackendPath('/{admin}/page_optimizer/index.php'),
+                'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/page_optimizer/index.php'}); return false")
+            )
+        );
 
-        Core_Event::attach('onAfterShowTemplate', [$this, 'onAfterShowTemplate']);
+        Core_Event::attach('onAfterShowTemplate', array($this, 'onAfterShowTemplate'));
     }
 
     public function onAfterShowTemplate($args)
@@ -57,6 +57,26 @@ class PageOptimizer_Module extends Core_Module_Abstract
         }
     }
 
-    public function install() {}
-    public function uninstall() {}
+    public function install()
+    {
+        $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
+
+        if (!PageOptimizer_Settings::install($siteId)) {
+            throw new Exception(
+                'Page Optimizer: cannot create writable directory '
+                . PageOptimizer_Settings::getDirectory()
+            );
+        }
+    }
+
+    public function uninstall()
+    {
+        PageOptimizer_Settings::uninstall();
+    }
+}
+
+// Compatibility with HostCMS builds that derive the module class name
+// without preserving the underscore from the module code.
+if (!class_exists('PageOptimizer_Module', false)) {
+    class_alias('Page_Optimizer_Module', 'PageOptimizer_Module');
 }
