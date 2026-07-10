@@ -12,6 +12,96 @@ if (!class_exists('Optimizer_Settings', false)) {
 
 $sAdminFormAction = '/admin/optimizer/index.php';
 $sTitle = Core::_('Optimizer.title');
+$siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    @session_start();
+}
+
+if (empty($_SESSION['optimizer_ajax_token'])) {
+    $_SESSION['optimizer_ajax_token'] = bin2hex(random_bytes(24));
+}
+
+$optimizerAjaxToken = (string) $_SESSION['optimizer_ajax_token'];
+
+$booleanKeys = array(
+    'minify_html',
+    'html_remove_comments',
+    'combine_css',
+    'minify_css',
+    'combine_js',
+    'minify_js',
+    'lazy_load_images',
+    'rewrite_avif',
+    'rewrite_webp',
+    'dns_prefetch_enabled',
+    'preconnect_enabled',
+    'preload_fonts_enabled',
+    'critical_css_enabled'
+);
+
+$textKeys = array(
+    'dns_prefetch',
+    'preconnect',
+    'preload_fonts',
+    'critical_css'
+);
+
+if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
+    header('Content-Type: application/json; charset=UTF-8');
+
+    $token = (string) Core_Array::getPost('token', '');
+    $name = (string) Core_Array::getPost('name', '');
+    $value = Core_Array::getPost('value', '');
+
+    if ($token === '' || !hash_equals($optimizerAjaxToken, $token)) {
+        echo json_encode(array(
+            'success' => false,
+            'message' => Core::_('Optimizer.csrf_error')
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (!in_array($name, $booleanKeys, true) && !in_array($name, $textKeys, true)) {
+        echo json_encode(array(
+            'success' => false,
+            'message' => Core::_('Optimizer.messages_save_error')
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $settings = Optimizer_Settings::get($siteId);
+
+    if (in_array($name, $booleanKeys, true)) {
+        $settings[$name] = (bool) ((int) $value);
+    }
+    else {
+        $settings[$name] = trim((string) $value);
+    }
+
+    $success = Optimizer_Settings::save($settings, $siteId);
+    $enabledCount = 0;
+
+    if ($success) {
+        foreach ($settings as $settingValue) {
+            if (is_bool($settingValue) && $settingValue) {
+                $enabledCount++;
+            }
+        }
+    }
+
+    echo json_encode(array(
+        'success' => $success,
+        'message' => $success
+            ? Core::_('Optimizer.messages_success_save')
+            : Core::_('Optimizer.messages_save_error'),
+        'enabledCount' => $enabledCount,
+        'mode' => $enabledCount === 0
+            ? Core::_('Optimizer.safe_mode')
+            : Core::_('Optimizer.custom_mode')
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 $oAdmin_Form = Core_Entity::factory('Admin_Form')->getByGuid('OPTIMIZER-SETTINGS-FORM');
 
@@ -29,47 +119,6 @@ $oAdmin_Form_Controller
     ->path($sAdminFormAction)
     ->title($sTitle)
     ->pageTitle($sTitle);
-
-$siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
-$message = '';
-$messageType = 'success';
-
-if ((int) Core_Array::getRequest('save', 0) === 1) {
-    $settings = Optimizer_Settings::get($siteId);
-
-    $booleanKeys = array(
-        'minify_html',
-        'html_remove_comments',
-        'combine_css',
-        'minify_css',
-        'combine_js',
-        'minify_js',
-        'lazy_load_images',
-        'rewrite_avif',
-        'rewrite_webp',
-        'dns_prefetch_enabled',
-        'preconnect_enabled',
-        'preload_fonts_enabled',
-        'critical_css_enabled'
-    );
-
-    foreach ($booleanKeys as $key) {
-        $settings[$key] = (bool) Core_Array::getRequest($key, 0);
-    }
-
-    $settings['dns_prefetch'] = trim((string) Core_Array::getRequest('dns_prefetch', ''));
-    $settings['preconnect'] = trim((string) Core_Array::getRequest('preconnect', ''));
-    $settings['preload_fonts'] = trim((string) Core_Array::getRequest('preload_fonts', ''));
-    $settings['critical_css'] = trim((string) Core_Array::getRequest('critical_css', ''));
-
-    if (Optimizer_Settings::save($settings, $siteId)) {
-        $message = Core::_('Optimizer.messages_success_save');
-    }
-    else {
-        $message = Core::_('Optimizer.messages_save_error');
-        $messageType = 'danger';
-    }
-}
 
 $settings = Optimizer_Settings::get($siteId);
 $statsSummary = Optimizer_Settings::getStatsSummary($siteId);
@@ -93,16 +142,6 @@ $oForm = Admin_Form_Entity::factory('Form')
     ->action($oAdmin_Form_Controller->getPath())
     ->enctype('multipart/form-data');
 
-if ($message !== '') {
-    $oForm->add(
-        Admin_Form_Entity::factory('Code')->html(
-            '<div class="alert alert-' . htmlspecialchars($messageType, ENT_QUOTES, 'UTF-8') . '">'
-            . htmlspecialchars($message, ENT_QUOTES, 'UTF-8')
-            . '</div>'
-        )
-    );
-}
-
 $enabledCount = 0;
 foreach ($settings as $value) {
     if (is_bool($value) && $value) {
@@ -114,19 +153,18 @@ $statusHtml = '<div class="alert alert-info">'
     . htmlspecialchars(Core::_('Optimizer.safe_mode_notice'), ENT_QUOTES, 'UTF-8')
     . '</div><p><strong>'
     . htmlspecialchars(Core::_('Optimizer.status_mode'), ENT_QUOTES, 'UTF-8')
-    . ':</strong> '
+    . ':</strong> <span id="optimizer-status-mode">'
     . htmlspecialchars($enabledCount === 0 ? Core::_('Optimizer.safe_mode') : Core::_('Optimizer.custom_mode'), ENT_QUOTES, 'UTF-8')
-    . ' &nbsp; <strong>'
+    . '</span> &nbsp; <strong>'
     . htmlspecialchars(Core::_('Optimizer.status_enabled'), ENT_QUOTES, 'UTF-8')
-    . ':</strong> ' . (int) $enabledCount
-    . ' &nbsp; <strong>'
+    . ':</strong> <span id="optimizer-status-enabled">' . (int) $enabledCount
+    . '</span> &nbsp; <strong>'
     . htmlspecialchars(Core::_('Optimizer.total_saved'), ENT_QUOTES, 'UTF-8')
     . ':</strong> '
     . htmlspecialchars($statsSummary['total'], ENT_QUOTES, 'UTF-8')
-    . '</p>';
+    . ' &nbsp; <span id="optimizer-save-status" class="text-muted"></span></p>';
 
 $oForm->add(Admin_Form_Entity::factory('Code')->html($statusHtml));
-$oForm->add(Admin_Form_Entity::factory('Code')->html('<input type="hidden" name="save" value="1">'));
 
 function optimizerAddCheckbox($tab, $name, $caption, array $settings, $class = 'form-group col-xs-12 col-md-6')
 {
@@ -149,7 +187,7 @@ function optimizerAddTextarea($tab, $name, $caption, array $settings, $rows = 5)
             . '<label for="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
             . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8')
             . '</label>'
-            . '<textarea class="form-control" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+            . '<textarea class="form-control optimizer-live-setting" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
             . '" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
             . '" rows="' . (int) $rows . '">'
             . htmlspecialchars(isset($settings[$name]) ? $settings[$name] : '', ENT_QUOTES, 'UTF-8')
@@ -212,18 +250,27 @@ $oTabs
     ->add($oAdvancedTab);
 $oForm->add($oTabs);
 
-$savePath = Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php');
-$oForm->add(
-    Admin_Form_Entity::factory('Code')->html(
-        '<div class="form-group margin-top-20">'
-        . '<button type="button" class="btn btn-blue" onclick="var f=$(this).closest(\'form\'); mainFormLocker.unlock(); $.adminLoad({path:'
-        . htmlspecialchars(json_encode($savePath), ENT_QUOTES, 'UTF-8')
-        . ',additionalParams:f.serialize(),windowId:\'id_content\'}); return false;">'
-        . '<i class="fa fa-save"></i> '
-        . htmlspecialchars(Core::_('Optimizer.save'), ENT_QUOTES, 'UTF-8')
-        . '</button></div>'
-    )
-);
+$ajaxPath = Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php');
+$script = '<script>(function(){'
+    . 'var root=document.getElementById("id_content");if(!root){return;}'
+    . 'var status=root.querySelector("#optimizer-save-status");'
+    . 'var timers={};'
+    . 'function setStatus(text,isError){if(!status){return;}status.textContent=text;status.className=isError?"text-danger":"text-muted";}'
+    . 'function saveField(field){'
+    . 'var name=field.name;if(!name){return;}'
+    . 'var value=field.type==="checkbox"?(field.checked?"1":"0"):field.value;'
+    . 'var body=new URLSearchParams();body.set("ajax_save","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("name",name);body.set("value",value);'
+    . 'setStatus(' . json_encode(Core::_('Optimizer.messages_saving')) . ',false);'
+    . 'fetch(' . json_encode($ajaxPath) . ',{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},body:body.toString()})'
+    . '.then(function(response){if(!response.ok){throw new Error("HTTP "+response.status);}return response.json();})'
+    . '.then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}'
+    . 'var mode=root.querySelector("#optimizer-status-mode");var enabled=root.querySelector("#optimizer-status-enabled");if(mode){mode.textContent=data.mode;}if(enabled){enabled.textContent=data.enabledCount;}setStatus(data.message,false);})'
+    . '.catch(function(error){setStatus(error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ',true);});'
+    . '}'
+    . 'root.querySelectorAll("input[type=checkbox][name]").forEach(function(field){field.addEventListener("change",function(){saveField(field);});});'
+    . 'root.querySelectorAll("textarea.optimizer-live-setting[name]").forEach(function(field){field.addEventListener("input",function(){clearTimeout(timers[field.name]);timers[field.name]=setTimeout(function(){saveField(field);},700);});field.addEventListener("blur",function(){clearTimeout(timers[field.name]);saveField(field);});});'
+    . '})();</script>';
+$oForm->add(Admin_Form_Entity::factory('Code')->html($script));
 
 ob_start();
 $oForm->execute();
