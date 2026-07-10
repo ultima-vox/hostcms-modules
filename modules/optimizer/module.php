@@ -13,7 +13,7 @@ require_once __DIR__ . '/Optimizer.php';
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.5.2';
+    public $version = '1.5.3';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
@@ -57,18 +57,26 @@ class Optimizer_Module extends Core_Module_Abstract
     /**
      * Install module.
      *
-     * The module has no database entities or mandatory tables. Settings storage
-     * is prepared on a best-effort basis and will also be created lazily on the
-     * first save in the administration section.
+     * HostCMS can invoke this method in a context where helper classes from the
+     * module file have not yet been loaded, so the dependency is required here
+     * explicitly before use.
      */
     public function install()
     {
+        if (!class_exists('Optimizer_Settings', false)) {
+            require_once __DIR__ . '/Optimizer_Settings.php';
+        }
+
         $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
         Optimizer_Settings::install($siteId);
     }
 
     public function uninstall()
     {
+        if (!class_exists('Optimizer_Settings', false)) {
+            require_once __DIR__ . '/Optimizer_Settings.php';
+        }
+
         Optimizer_Settings::uninstall();
     }
 }
