@@ -10,6 +10,7 @@ class PageOptimizer_Settings
     protected static $defaults = [
         'config_version'         => 2,
         'minify_html'           => false,
+        'html_remove_comments'  => false,
         'combine_css'           => false,
         'minify_css'            => false,
         'combine_js'            => false,
