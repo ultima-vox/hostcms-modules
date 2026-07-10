@@ -10,16 +10,10 @@ if (!defined('OPTIMIZER_AUTOLOAD_REGISTERED')) {
             return;
         }
 
-        $paths = array(
-            __DIR__ . '/classes/' . $className . '.php',
-            __DIR__ . '/' . $className . '.php'
-        );
+        $path = __DIR__ . '/classes/' . $className . '.php';
 
-        foreach ($paths as $path) {
-            if (is_file($path)) {
-                require_once $path;
-                return;
-            }
+        if (is_file($path)) {
+            require_once $path;
         }
     });
 }
