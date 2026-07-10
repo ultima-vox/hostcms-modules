@@ -11,9 +11,9 @@ require_once __DIR__ . '/Optimizer.php';
 /**
  * Optimizer module for HostCMS 7.
  */
-class Optimizer_Module extends Core_Module
+class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.5.1';
+    public $version = '1.5.2';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
