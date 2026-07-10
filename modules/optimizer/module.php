@@ -6,6 +6,8 @@ require_once __DIR__ . '/Optimizer_Context.php';
 require_once __DIR__ . '/Optimizer_Settings.php';
 require_once __DIR__ . '/Optimizer_Html.php';
 require_once __DIR__ . '/Optimizer_Assets.php';
+require_once __DIR__ . '/Optimizer_Image_Scanner.php';
+require_once __DIR__ . '/Optimizer_Image_Generator.php';
 require_once __DIR__ . '/Optimizer.php';
 
 /**
@@ -13,7 +15,7 @@ require_once __DIR__ . '/Optimizer.php';
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.6.0';
+    public $version = '1.7.0';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
