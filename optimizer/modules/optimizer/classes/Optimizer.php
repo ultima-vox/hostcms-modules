@@ -67,6 +67,18 @@ class Optimizer
             return $html;
         }
 
+        $criticalCss = '';
+        if (!empty($settings['critical_css_enabled']) && trim(isset($settings['critical_css']) ? $settings['critical_css'] : '') !== '') {
+            $criticalCss = '<style data-optimizer-critical>' . trim($settings['critical_css']) . '</style>' . "\n";
+        }
+
+        if ($criticalCss !== '' && stripos($html, 'data-optimizer-critical') === false) {
+            $htmlWithCritical = preg_replace('/<head\b[^>]*>/i', '$0' . "\n" . $criticalCss, $html, 1);
+            if (is_string($htmlWithCritical)) {
+                $html = $htmlWithCritical;
+            }
+        }
+
         $head = '';
 
         if (!empty($settings['dns_prefetch_enabled'])) {
@@ -91,10 +103,6 @@ class Optimizer
             foreach (self::parseLines(isset($settings['preload_fonts']) ? $settings['preload_fonts'] : '') as $font) {
                 $head .= '<link rel="preload" href="' . htmlspecialchars($font, ENT_QUOTES, 'UTF-8') . '" as="font" type="' . self::getFontType($font) . '" crossorigin>' . "\n";
             }
-        }
-
-        if (!empty($settings['critical_css_enabled']) && trim(isset($settings['critical_css']) ? $settings['critical_css'] : '') !== '') {
-            $head .= '<style data-optimizer-critical>' . trim($settings['critical_css']) . '</style>' . "\n";
         }
 
         return $head !== '' ? str_ireplace('</head>', $head . '</head>', $html) : $html;
