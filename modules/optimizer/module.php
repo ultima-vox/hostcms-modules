@@ -9,7 +9,7 @@ require_once __DIR__ . '/bootstrap.php';
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.8.1';
+    public $version = '1.8.2';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
