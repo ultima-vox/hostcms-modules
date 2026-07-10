@@ -44,14 +44,6 @@ class Optimizer
         $html = self::injectHead($html, $settings);
         $html = self::optimizeImages($html, $settings);
 
-        if (!empty($settings['combine_css'])) {
-            $html = Optimizer_Assets::combineCss($html, $siteId, !empty($settings['minify_css']));
-        }
-
-        if (!empty($settings['combine_js'])) {
-            $html = Optimizer_Assets::combineJs($html, $siteId, !empty($settings['minify_js']));
-        }
-
         if (!empty($settings['minify_html'])) {
             $html = Optimizer_Html::minify($html, array(
                 'remove_comments' => !empty($settings['html_remove_comments'])
@@ -180,8 +172,7 @@ class Optimizer
         $pattern = '/(\s' . preg_quote($attribute, '/') . '\s*=\s*)(["\'])(.*?)\2/i';
 
         return preg_replace_callback($pattern, function ($match) use ($settings) {
-            $newUrl = self::getBestImageVariant($match[3], $settings);
-            return $match[1] . $match[2] . $newUrl . $match[2];
+            return $match[1] . $match[2] . self::getBestImageVariant($match[3], $settings) . $match[2];
         }, $tag, 1);
     }
 
@@ -199,8 +190,8 @@ class Optimizer
                 }
 
                 $parts = preg_split('/\s+/', trim($item), 2);
-                $url = self::getBestImageVariant($parts[0], $settings);
-                $rewritten[] = $url . (isset($parts[1]) ? ' ' . $parts[1] : '');
+                $rewritten[] = self::getBestImageVariant($parts[0], $settings)
+                    . (isset($parts[1]) ? ' ' . $parts[1] : '');
             }
 
             return $match[1] . $match[2] . implode(', ', $rewritten) . $match[2];
