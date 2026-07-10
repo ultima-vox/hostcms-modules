@@ -51,8 +51,7 @@ $textKeys = array(
     'image_scan_paths',
     'dns_prefetch',
     'preconnect',
-    'preload_fonts',
-    'critical_css'
+    'preload_fonts'
 );
 
 function optimizerJsonResponse(array $data)
@@ -66,6 +65,19 @@ function optimizerCheckToken($expectedToken)
 {
     $token = (string) Core_Array::getPost('token', '');
     return $token !== '' && hash_equals($expectedToken, $token);
+}
+
+function optimizerEnabledCount(array $settings)
+{
+    $count = 0;
+
+    foreach ($settings as $value) {
+        if (is_bool($value) && $value) {
+            $count++;
+        }
+    }
+
+    return $count;
 }
 
 if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
@@ -102,15 +114,7 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
     }
 
     $success = Optimizer_Settings::save($settings, $siteId);
-    $enabledCount = 0;
-
-    if ($success) {
-        foreach ($settings as $settingValue) {
-            if (is_bool($settingValue) && $settingValue) {
-                $enabledCount++;
-            }
-        }
-    }
+    $enabledCount = optimizerEnabledCount($settings);
 
     optimizerJsonResponse(array(
         'success' => $success,
@@ -122,6 +126,26 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
             ? Core::_('Optimizer.safe_mode')
             : Core::_('Optimizer.custom_mode'),
         'value' => isset($settings[$name]) ? $settings[$name] : null
+    ));
+}
+
+if ((int) Core_Array::getPost('ajax_save_critical_css', 0) === 1) {
+    if (!optimizerCheckToken($optimizerAjaxToken)) {
+        optimizerJsonResponse(array(
+            'success' => false,
+            'message' => Core::_('Optimizer.csrf_error')
+        ));
+    }
+
+    $settings = Optimizer_Settings::get($siteId);
+    $settings['critical_css'] = trim((string) Core_Array::getPost('critical_css', ''));
+    $success = Optimizer_Settings::save($settings, $siteId);
+
+    optimizerJsonResponse(array(
+        'success' => $success,
+        'message' => $success
+            ? Core::_('Optimizer.critical_css_saved')
+            : Core::_('Optimizer.messages_save_error')
     ));
 }
 
@@ -238,12 +262,7 @@ $oForm = Admin_Form_Entity::factory('Form')
     ->action($oAdmin_Form_Controller->getPath())
     ->enctype('multipart/form-data');
 
-$enabledCount = 0;
-foreach ($settings as $value) {
-    if (is_bool($value) && $value) {
-        $enabledCount++;
-    }
-}
+$enabledCount = optimizerEnabledCount($settings);
 
 $statusHtml = '<div class="alert alert-info">'
     . htmlspecialchars(Core::_('Optimizer.safe_mode_notice'), ENT_QUOTES, 'UTF-8')
@@ -262,17 +281,36 @@ $statusHtml = '<div class="alert alert-info">'
 
 $oForm->add(Admin_Form_Entity::factory('Code')->html($statusHtml));
 
-function optimizerAddCheckbox($tab, $name, $caption, array $settings, $class = 'form-group col-xs-12 col-md-6')
+$adminCss = '<style>'
+    . '.optimizer-dashboard{margin-top:10px}'
+    . '.optimizer-section{margin-bottom:28px}'
+    . '.optimizer-section__title{margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e5e5;font-size:16px;font-weight:600}'
+    . '.optimizer-switch{display:flex;align-items:center;gap:10px;margin:0 0 14px;cursor:pointer;user-select:none}'
+    . '.optimizer-switch input{position:absolute;opacity:0;pointer-events:none}'
+    . '.optimizer-switch__slider{position:relative;flex:0 0 42px;width:42px;height:22px;border-radius:999px;background:#cfcfcf;transition:background-color .2s ease,box-shadow .2s ease}'
+    . '.optimizer-switch__slider:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s ease}'
+    . '.optimizer-switch input:checked+.optimizer-switch__slider{background:#53a93f}'
+    . '.optimizer-switch input:checked+.optimizer-switch__slider:after{transform:translateX(20px)}'
+    . '.optimizer-switch input:focus-visible+.optimizer-switch__slider{box-shadow:0 0 0 3px rgba(83,169,63,.22)}'
+    . '.optimizer-switch input:disabled+.optimizer-switch__slider,.optimizer-switch input:disabled~.optimizer-switch__label{opacity:.5;cursor:not-allowed}'
+    . '.optimizer-switch__label{font-weight:400;line-height:1.35}'
+    . '.optimizer-critical-actions{display:flex;align-items:center;gap:12px;margin-top:12px}'
+    . '.optimizer-critical-status{min-height:20px}'
+    . '.optimizer-dashboard .ace_editor{min-height:360px}'
+    . '@media(max-width:991px){.optimizer-dashboard__right{margin-top:20px}}'
+    . '</style>';
+$oForm->add(Admin_Form_Entity::factory('Code')->html($adminCss));
+
+function optimizerAddSwitch($parent, $name, $caption, array $settings)
 {
-    $tab->add(
-        Admin_Form_Entity::factory('Div')->class('row')->add(
-            Admin_Form_Entity::factory('Checkbox')
-                ->name($name)
-                ->value(!empty($settings[$name]) ? 1 : 0)
-                ->caption($caption)
-                ->divAttr(array('class' => $class))
-        )
-    );
+    $checked = !empty($settings[$name]) ? ' checked' : '';
+    $html = '<label class="optimizer-switch">'
+        . '<input type="checkbox" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value="1"' . $checked . '>'
+        . '<span class="optimizer-switch__slider" aria-hidden="true"></span>'
+        . '<span class="optimizer-switch__label">' . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8') . '</span>'
+        . '</label>';
+
+    $parent->add(Admin_Form_Entity::factory('Code')->html($html));
 }
 
 function optimizerAddTextarea($tab, $name, $caption, array $settings, $rows = 5, $hint = '')
@@ -317,29 +355,78 @@ function optimizerAddNumber($tab, $name, $caption, array $settings, $min, $max, 
 $oMainTab = Admin_Form_Entity::factory('Tab')
     ->name('main')
     ->caption(Core::_('Optimizer.tab_main'));
-$oMainTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_html'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oMainTab, 'minify_html', Core::_('Optimizer.minify_html'), $settings);
-optimizerAddCheckbox($oMainTab, 'html_remove_comments', Core::_('Optimizer.html_remove_comments'), $settings);
 
-$oAssetsTab = Admin_Form_Entity::factory('Tab')
-    ->name('assets')
-    ->caption(Core::_('Optimizer.tab_assets'));
-$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_css'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAssetsTab, 'combine_css', Core::_('Optimizer.combine_css'), $settings);
-optimizerAddCheckbox($oAssetsTab, 'minify_css', Core::_('Optimizer.minify_css'), $settings);
-$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_js'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAssetsTab, 'combine_js', Core::_('Optimizer.combine_js'), $settings);
-optimizerAddCheckbox($oAssetsTab, 'minify_js', Core::_('Optimizer.minify_js'), $settings);
+$oDashboardRow = Admin_Form_Entity::factory('Div')->class('row optimizer-dashboard');
+$oDashboardLeft = Admin_Form_Entity::factory('Div')->class('col-xs-12 col-md-5 optimizer-dashboard__left');
+$oDashboardRight = Admin_Form_Entity::factory('Div')->class('col-xs-12 col-md-7 optimizer-dashboard__right');
+$oDashboardRow->add($oDashboardLeft)->add($oDashboardRight);
+$oMainTab->add($oDashboardRow);
+
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html(
+    '<div class="optimizer-section"><h4 class="optimizer-section__title">'
+    . htmlspecialchars(Core::_('Optimizer.section_html'), ENT_QUOTES, 'UTF-8')
+    . '</h4>'
+));
+optimizerAddSwitch($oDashboardLeft, 'minify_html', Core::_('Optimizer.minify_html'), $settings);
+optimizerAddSwitch($oDashboardLeft, 'html_remove_comments', Core::_('Optimizer.html_remove_comments'), $settings);
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html('</div>'));
+
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html(
+    '<div class="optimizer-section"><h4 class="optimizer-section__title">'
+    . htmlspecialchars(Core::_('Optimizer.section_css'), ENT_QUOTES, 'UTF-8')
+    . '</h4>'
+));
+optimizerAddSwitch($oDashboardLeft, 'combine_css', Core::_('Optimizer.combine_css'), $settings);
+optimizerAddSwitch($oDashboardLeft, 'minify_css', Core::_('Optimizer.minify_css'), $settings);
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html('</div>'));
+
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html(
+    '<div class="optimizer-section"><h4 class="optimizer-section__title">'
+    . htmlspecialchars(Core::_('Optimizer.section_js'), ENT_QUOTES, 'UTF-8')
+    . '</h4>'
+));
+optimizerAddSwitch($oDashboardLeft, 'combine_js', Core::_('Optimizer.combine_js'), $settings);
+optimizerAddSwitch($oDashboardLeft, 'minify_js', Core::_('Optimizer.minify_js'), $settings);
+$oDashboardLeft->add(Admin_Form_Entity::factory('Code')->html('</div>'));
+
+$oDashboardRight->add(Admin_Form_Entity::factory('Code')->html(
+    '<div class="optimizer-section"><h4 class="optimizer-section__title">'
+    . htmlspecialchars(Core::_('Optimizer.section_critical_css'), ENT_QUOTES, 'UTF-8')
+    . '</h4>'
+));
+optimizerAddSwitch($oDashboardRight, 'critical_css_enabled', Core::_('Optimizer.critical_css_enabled'), $settings);
+
+$oCriticalCss = Admin_Form_Entity::factory('Textarea')
+    ->value(isset($settings['critical_css']) ? $settings['critical_css'] : '')
+    ->rows(18)
+    ->caption(Core::_('Optimizer.critical_css'))
+    ->name('critical_css')
+    ->syntaxHighlighter(defined('SYNTAX_HIGHLIGHTING') ? SYNTAX_HIGHLIGHTING : TRUE)
+    ->syntaxHighlighterMode('css')
+    ->divAttr(array('class' => 'form-group col-xs-12'));
+
+$oDashboardRight->add(
+    Admin_Form_Entity::factory('Div')->class('row')->add($oCriticalCss)
+);
+
+$criticalActions = '<div class="optimizer-critical-actions">'
+    . '<button type="button" class="btn btn-blue" id="optimizer-save-critical-css">'
+    . '<i class="fa fa-save"></i> '
+    . htmlspecialchars(Core::_('Optimizer.save'), ENT_QUOTES, 'UTF-8')
+    . '</button>'
+    . '<span id="optimizer-critical-status" class="optimizer-critical-status text-muted"></span>'
+    . '</div></div>';
+$oDashboardRight->add(Admin_Form_Entity::factory('Code')->html($criticalActions));
 
 $oImagesTab = Admin_Form_Entity::factory('Tab')
     ->name('images')
     ->caption(Core::_('Optimizer.tab_images'));
 $oImagesTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_images'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oImagesTab, 'lazy_load_images', Core::_('Optimizer.lazy_load_images'), $settings);
+optimizerAddSwitch($oImagesTab, 'lazy_load_images', Core::_('Optimizer.lazy_load_images'), $settings);
 optimizerAddNumber($oImagesTab, 'lazy_load_skip_first', Core::_('Optimizer.lazy_load_skip_first'), $settings, 0, 20, Core::_('Optimizer.lazy_load_skip_first_hint'));
 optimizerAddTextarea($oImagesTab, 'image_exclude_classes', Core::_('Optimizer.image_exclude_classes'), $settings, 5, Core::_('Optimizer.image_exclude_classes_hint'));
-optimizerAddCheckbox($oImagesTab, 'rewrite_webp', Core::_('Optimizer.rewrite_webp'), $settings);
-optimizerAddCheckbox($oImagesTab, 'rewrite_avif', Core::_('Optimizer.rewrite_avif'), $settings);
+optimizerAddSwitch($oImagesTab, 'rewrite_webp', Core::_('Optimizer.rewrite_webp'), $settings);
+optimizerAddSwitch($oImagesTab, 'rewrite_avif', Core::_('Optimizer.rewrite_avif'), $settings);
 
 $capabilityHtml = '<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_image_generation'), ENT_QUOTES, 'UTF-8') . '</h4>'
     . '<div class="alert alert-' . (!empty($imageCapabilities['webp']) || !empty($imageCapabilities['avif']) ? 'success' : 'danger') . '">'
@@ -352,8 +439,8 @@ $capabilityHtml = '<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_image
     . '</div>';
 $oImagesTab->add(Admin_Form_Entity::factory('Code')->html($capabilityHtml));
 
-optimizerAddCheckbox($oImagesTab, 'image_generate_webp', Core::_('Optimizer.image_generate_webp'), $settings);
-optimizerAddCheckbox($oImagesTab, 'image_generate_avif', Core::_('Optimizer.image_generate_avif'), $settings);
+optimizerAddSwitch($oImagesTab, 'image_generate_webp', Core::_('Optimizer.image_generate_webp'), $settings);
+optimizerAddSwitch($oImagesTab, 'image_generate_avif', Core::_('Optimizer.image_generate_avif'), $settings);
 optimizerAddNumber($oImagesTab, 'image_webp_quality', Core::_('Optimizer.image_webp_quality'), $settings, 1, 100);
 optimizerAddNumber($oImagesTab, 'image_avif_quality', Core::_('Optimizer.image_avif_quality'), $settings, 1, 100);
 optimizerAddTextarea($oImagesTab, 'image_scan_paths', Core::_('Optimizer.image_scan_paths'), $settings, 5, Core::_('Optimizer.image_scan_paths_hint'));
@@ -378,29 +465,25 @@ $oNetworkTab = Admin_Form_Entity::factory('Tab')
     ->name('network')
     ->caption(Core::_('Optimizer.tab_network'));
 $oNetworkTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_dns'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oNetworkTab, 'dns_prefetch_enabled', Core::_('Optimizer.dns_prefetch_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddSwitch($oNetworkTab, 'dns_prefetch_enabled', Core::_('Optimizer.dns_prefetch_enabled'), $settings);
 optimizerAddTextarea($oNetworkTab, 'dns_prefetch', Core::_('Optimizer.dns_prefetch'), $settings, 5);
 $oNetworkTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_preconnect'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oNetworkTab, 'preconnect_enabled', Core::_('Optimizer.preconnect_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddSwitch($oNetworkTab, 'preconnect_enabled', Core::_('Optimizer.preconnect_enabled'), $settings);
 optimizerAddTextarea($oNetworkTab, 'preconnect', Core::_('Optimizer.preconnect'), $settings, 5);
 
-$oAdvancedTab = Admin_Form_Entity::factory('Tab')
-    ->name('advanced')
-    ->caption(Core::_('Optimizer.tab_advanced'));
-$oAdvancedTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_fonts'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAdvancedTab, 'preload_fonts_enabled', Core::_('Optimizer.preload_fonts_enabled'), $settings, 'form-group col-xs-12');
-optimizerAddTextarea($oAdvancedTab, 'preload_fonts', Core::_('Optimizer.preload_fonts'), $settings, 6);
-$oAdvancedTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_critical_css'), ENT_QUOTES, 'UTF-8') . '</h4>'));
-optimizerAddCheckbox($oAdvancedTab, 'critical_css_enabled', Core::_('Optimizer.critical_css_enabled'), $settings, 'form-group col-xs-12');
-optimizerAddTextarea($oAdvancedTab, 'critical_css', Core::_('Optimizer.critical_css'), $settings, 12);
+$oFontsTab = Admin_Form_Entity::factory('Tab')
+    ->name('fonts')
+    ->caption(Core::_('Optimizer.tab_fonts'));
+$oFontsTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_fonts'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddSwitch($oFontsTab, 'preload_fonts_enabled', Core::_('Optimizer.preload_fonts_enabled'), $settings);
+optimizerAddTextarea($oFontsTab, 'preload_fonts', Core::_('Optimizer.preload_fonts'), $settings, 6);
 
 $oTabs = Admin_Form_Entity::factory('Tabs');
 $oTabs
     ->add($oMainTab)
-    ->add($oAssetsTab)
     ->add($oImagesTab)
     ->add($oNetworkTab)
-    ->add($oAdvancedTab);
+    ->add($oFontsTab);
 $oForm->add($oTabs);
 
 $ajaxPath = Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php');
@@ -409,12 +492,16 @@ $script = '<script>(function(){'
     . 'var status=root.querySelector("#optimizer-save-status");var timers={};var generationStopped=false;'
     . 'function setStatus(text,isError){if(!status){return;}status.textContent=text;status.className=isError?"text-danger":"text-muted";}'
     . 'function post(body){return fetch(' . json_encode($ajaxPath) . ',{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},body:body.toString()}).then(function(response){if(!response.ok){throw new Error("HTTP "+response.status);}return response.json();});}'
-    . 'function saveField(field){var name=field.name;if(!name){return;}var value=field.type==="checkbox"?(field.checked?"1":"0"):field.value;var body=new URLSearchParams();body.set("ajax_save","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("name",name);body.set("value",value);setStatus(' . json_encode(Core::_('Optimizer.messages_saving')) . ',false);post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}if(field.type==="number"&&data.value!==null){field.value=data.value;}var mode=root.querySelector("#optimizer-status-mode");var enabled=root.querySelector("#optimizer-status-enabled");if(mode){mode.textContent=data.mode;}if(enabled){enabled.textContent=data.enabledCount;}setStatus(data.message,false);}).catch(function(error){setStatus(error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ',true);});}'
+    . 'function updateSummary(data){var mode=root.querySelector("#optimizer-status-mode");var enabled=root.querySelector("#optimizer-status-enabled");if(mode&&data.mode){mode.textContent=data.mode;}if(enabled&&data.enabledCount!==undefined){enabled.textContent=data.enabledCount;}}'
+    . 'function saveField(field){var name=field.name;if(!name){return;}var value=field.type==="checkbox"?(field.checked?"1":"0"):field.value;var body=new URLSearchParams();body.set("ajax_save","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("name",name);body.set("value",value);setStatus(' . json_encode(Core::_('Optimizer.messages_saving')) . ',false);post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}if(field.type==="number"&&data.value!==null){field.value=data.value;}updateSummary(data);setStatus(data.message,false);}).catch(function(error){setStatus(error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ',true);});}'
+    . 'function criticalCssValue(){var textarea=root.querySelector("textarea[name=critical_css]");if(!textarea){return "";}try{var group=textarea.closest(".form-group");var aceNode=group?group.querySelector(".ace_editor"):null;if(aceNode&&window.ace){return window.ace.edit(aceNode).getValue();}if(textarea.nextElementSibling&&textarea.nextElementSibling.CodeMirror){return textarea.nextElementSibling.CodeMirror.getValue();}if(textarea.CodeMirror){return textarea.CodeMirror.getValue();}}catch(e){}return textarea.value;}'
+    . 'function saveCriticalCss(){var button=root.querySelector("#optimizer-save-critical-css");var box=root.querySelector("#optimizer-critical-status");var body=new URLSearchParams();body.set("ajax_save_critical_css","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("critical_css",criticalCssValue());if(button){button.disabled=true;}if(box){box.textContent=' . json_encode(Core::_('Optimizer.messages_saving')) . ';box.className="optimizer-critical-status text-muted";}post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}if(box){box.textContent=data.message;box.className="optimizer-critical-status text-success";}}).catch(function(error){if(box){box.textContent=error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ';box.className="optimizer-critical-status text-danger";}}).then(function(){if(button){button.disabled=false;}});}'
     . 'function renderGeneration(data){var box=root.querySelector("#optimizer-generation-status");if(!box){return;}var text=data.message||"";if(data.found!==undefined){text+=" Найдено: "+data.found+". Обработано: "+data.processed+". Создано: "+data.generated+". Пропущено: "+data.skipped+". Ошибок: "+data.failed+". Осталось: "+data.remaining+".";}if(data.errors&&data.errors.length){text+=" "+data.errors.join("; ");}box.textContent=text;box.className="alert "+(data.success&&data.failed===0?"alert-success":"alert-warning")+" margin-top-10";}'
     . 'function finishGeneration(){var start=root.querySelector("#optimizer-generate-images");var stop=root.querySelector("#optimizer-stop-generation");if(start){start.disabled=false;}if(stop){stop.disabled=true;}}'
     . 'function runGeneration(){if(generationStopped){finishGeneration();return;}var body=new URLSearchParams();body.set("ajax_generate_images","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');post(body).then(function(data){if(!data.success){throw new Error(data.message||"Generation failed");}renderGeneration(data);if(data.remaining>0&&data.failed===0&&!generationStopped){setTimeout(runGeneration,250);}else{finishGeneration();}}).catch(function(error){renderGeneration({success:false,message:error.message||"Generation failed"});finishGeneration();});}'
-    . 'root.querySelectorAll("input[type=checkbox][name]").forEach(function(field){field.addEventListener("change",function(){saveField(field);});});'
+    . 'root.querySelectorAll(".optimizer-switch input[type=checkbox][name]").forEach(function(field){field.addEventListener("change",function(){saveField(field);});});'
     . 'root.querySelectorAll(".optimizer-live-setting[name]").forEach(function(field){field.addEventListener("input",function(){clearTimeout(timers[field.name]);timers[field.name]=setTimeout(function(){saveField(field);},700);});field.addEventListener("blur",function(){clearTimeout(timers[field.name]);saveField(field);});});'
+    . 'var criticalButton=root.querySelector("#optimizer-save-critical-css");if(criticalButton){criticalButton.addEventListener("click",saveCriticalCss);}'
     . 'var start=root.querySelector("#optimizer-generate-images");var stop=root.querySelector("#optimizer-stop-generation");if(start){start.addEventListener("click",function(){generationStopped=false;start.disabled=true;if(stop){stop.disabled=false;}var box=root.querySelector("#optimizer-generation-status");if(box){box.textContent=' . json_encode(Core::_('Optimizer.image_generation_running')) . ';box.className="alert alert-info margin-top-10";}runGeneration();});}if(stop){stop.addEventListener("click",function(){generationStopped=true;finishGeneration();});}'
     . '})();</script>';
 $oForm->add(Admin_Form_Entity::factory('Code')->html($script));
