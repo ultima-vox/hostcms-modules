@@ -28,7 +28,9 @@ class PageOptimizer
         }
 
         if (!empty($settings['minify_html'])) {
-            $html = self::minifyHtml($html);
+            $html = PageOptimizer_Html::minify($html, [
+                'remove_comments' => !empty($settings['html_remove_comments']),
+            ]);
         }
 
         return $html;
@@ -101,24 +103,6 @@ class PageOptimizer
 
             return $img;
         }, $html);
-    }
-
-    protected static function minifyHtml($html)
-    {
-        $protected = ['script', 'style', 'pre', 'textarea'];
-        $pattern = '#<!--\[if[^>]*+>.*?<!\[endif\]-->|<!\[CDATA\[.*?\]\]>|<' . implode('|', $protected) . '\b[^>]*+>.*?</\1\s*>|<!--.*?-->#siu';
-
-        $tokens = [];
-        $html = preg_replace_callback($pattern, function ($m) use (&$tokens) {
-            $token = '___PO_TOKEN_' . count($tokens) . '___';
-            $tokens[$token] = $m[0];
-            return $token;
-        }, $html);
-
-        $html = preg_replace('/[ \t\r\n]+/', ' ', $html);
-        $html = trim($html);
-
-        return strtr($html, $tokens);
     }
 
     protected static function parseLines($value)
