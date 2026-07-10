@@ -70,12 +70,13 @@ class PageOptimizer_Controller_Index
         $csrfToken = $this->getCsrfToken();
 
         $enabledCount = 0;
-        foreach ($settings as $key => $value) {
+        foreach ($settings as $value) {
             if (is_bool($value) && $value) {
                 $enabledCount++;
             }
         }
 
+        echo '<div id="page_optimizer_admin">';
         echo '<div class="row">';
         echo '<div class="col-xs-12">';
         echo '<h5 class="row-title before-blue"><i class="fa fa-tachometer"></i> ' . $this->escape(Core::_('PageOptimizer.title')) . '</h5>';
@@ -137,9 +138,9 @@ class PageOptimizer_Controller_Index
         echo '</div>';
 
         echo '</div></div></form>';
-
-        echo '<script>$(function(){var f=$("#page_optimizer_form");f.on("submit",function(e){e.preventDefault();$.post(f.attr("action"),f.serialize(),function(html){$("#page_optimizer_form").closest(".row").parent().html(html);});});});</script>';
         echo '</div></div>';
+        echo '<script>$(function(){var f=$("#page_optimizer_form");f.off("submit.pageOptimizer").on("submit.pageOptimizer",function(e){e.preventDefault();$.post(f.attr("action"),f.serialize()).done(function(html){var next=$("<div>").html(html).find("#page_optimizer_admin");if(next.length){$("#page_optimizer_admin").replaceWith(next);}else{$.adminLoad({path:"' . $this->escape($path) . '"});}});});});</script>';
+        echo '</div>';
     }
 
     protected function renderStatusCard($title, $value, $icon)
