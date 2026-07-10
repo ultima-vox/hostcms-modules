@@ -4,6 +4,43 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 
 class Optimizer
 {
+    protected static $bufferStarted = false;
+
+    /**
+     * Start output buffering once for frontend requests.
+     *
+     * The callback receives the final rendered response and applies enabled
+     * optimizations only when it is a complete HTML document.
+     */
+    public static function startOutputBuffer()
+    {
+        if (self::$bufferStarted || PHP_SAPI === 'cli') {
+            return false;
+        }
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ($uri !== '' && preg_match('#^/(admin|hostcmsfiles|modules)/#i', $uri)) {
+            return false;
+        }
+
+        $method = strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET');
+        if ($method !== 'GET' && $method !== 'HEAD') {
+            return false;
+        }
+
+        self::$bufferStarted = ob_start(array(__CLASS__, 'process'));
+
+        return self::$bufferStarted;
+    }
+
+    /**
+     * Backward-compatible entry point for old layouts.
+     */
+    public static function ob()
+    {
+        return self::startOutputBuffer();
+    }
+
     public static function process($html)
     {
         if (!Optimizer_Context::shouldProcess($html)) {
