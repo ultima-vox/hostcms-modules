@@ -2,20 +2,14 @@
 
 defined('HOSTCMS') || exit('HostCMS: access denied.');
 
-require_once __DIR__ . '/Optimizer_Context.php';
-require_once __DIR__ . '/Optimizer_Settings.php';
-require_once __DIR__ . '/Optimizer_Html.php';
-require_once __DIR__ . '/Optimizer_Assets.php';
-require_once __DIR__ . '/Optimizer_Image_Scanner.php';
-require_once __DIR__ . '/Optimizer_Image_Generator.php';
-require_once __DIR__ . '/Optimizer.php';
+require_once __DIR__ . '/bootstrap.php';
 
 /**
  * Optimizer module for HostCMS 7.
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.7.0';
+    public $version = '1.7.1';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
@@ -42,20 +36,12 @@ class Optimizer_Module extends Core_Module_Abstract
 
     public function install()
     {
-        if (!class_exists('Optimizer_Settings', false)) {
-            require_once __DIR__ . '/Optimizer_Settings.php';
-        }
-
         $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
         Optimizer_Settings::install($siteId);
     }
 
     public function uninstall()
     {
-        if (!class_exists('Optimizer_Settings', false)) {
-            require_once __DIR__ . '/Optimizer_Settings.php';
-        }
-
         Optimizer_Settings::uninstall();
     }
 }
