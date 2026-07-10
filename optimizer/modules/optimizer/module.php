@@ -9,7 +9,7 @@ require_once __DIR__ . '/bootstrap.php';
  */
 class Optimizer_Module extends Core_Module_Abstract
 {
-    public $version = '1.9.0';
+    public $version = '1.10.0';
     public $date = '2026-07-10';
 
     protected $_moduleName = 'optimizer';
@@ -26,6 +26,14 @@ class Optimizer_Module extends Core_Module_Abstract
                 'name' => Core::_('Optimizer.menu_name'),
                 'href' => Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php'),
                 'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/optimizer/index.php'}); return false")
+            ),
+            array(
+                'sorting' => 20,
+                'block' => 1,
+                'ico' => 'fa fa-css3',
+                'name' => Core::_('Optimizer.css_loading_title'),
+                'href' => Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/css.php'),
+                'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/optimizer/css.php'}); return false")
             )
         );
 
