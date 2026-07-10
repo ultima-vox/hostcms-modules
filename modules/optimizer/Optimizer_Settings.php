@@ -5,7 +5,7 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 class Optimizer_Settings
 {
     protected static $defaults = array(
-        'config_version' => 2,
+        'config_version' => 3,
         'minify_html' => false,
         'html_remove_comments' => false,
         'combine_css' => false,
@@ -13,6 +13,8 @@ class Optimizer_Settings
         'combine_js' => false,
         'minify_js' => false,
         'lazy_load_images' => false,
+        'lazy_load_skip_first' => 2,
+        'image_exclude_classes' => "logo\nhero\nlcp",
         'rewrite_avif' => false,
         'rewrite_webp' => false,
         'dns_prefetch_enabled' => false,
@@ -97,6 +99,8 @@ class Optimizer_Settings
             }
         }
 
+        $data['lazy_load_skip_first'] = max(0, min(20, (int) $data['lazy_load_skip_first']));
+
         return $data;
     }
 
@@ -104,6 +108,7 @@ class Optimizer_Settings
     {
         $siteId = $siteId === null ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
         $data['config_version'] = self::$defaults['config_version'];
+        $data['lazy_load_skip_first'] = max(0, min(20, isset($data['lazy_load_skip_first']) ? (int) $data['lazy_load_skip_first'] : 2));
 
         if (!self::ensureDir()) {
             return false;
