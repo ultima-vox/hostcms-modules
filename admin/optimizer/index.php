@@ -111,5 +111,5 @@ optimizerTextarea('critical_css', Core::_('Optimizer.critical_css'), $settings, 
 echo '<button type="submit" class="btn btn-blue"><i class="fa fa-save"></i> ' . optimizerEscape(Core::_('Optimizer.save')) . '</button>';
 echo '</div></div></form>';
 
-echo '<script>$(function(){var f=$("#optimizer-form");f.off("submit.optimizer").on("submit.optimizer",function(e){e.preventDefault();mainFormLocker.unlock();$.adminLoad({path:' . json_encode($path) . ',additionalParams:f.serialize(),windowId:"id_content"});return false;});});</script>';
+echo '<script>$(function(){var f=$("#optimizer-form");f.off("submit.optimizer").on("submit.optimizer",function(e){e.preventDefault();$.ajax({url:f.attr("action"),type:"POST",data:f.serialize(),dataType:"html",global:false,cache:false}).done(function(html){var r=$("<div>").html(html).find("#optimizer-content");if(r.length){$("#optimizer-content").replaceWith(r);}else{$("#optimizer-content").html(html);}}).fail(function(xhr,status,error){alert("Optimizer save error: "+status+(error?" — "+error:""));});return false;});});</script>';
 echo '</div></div>';
