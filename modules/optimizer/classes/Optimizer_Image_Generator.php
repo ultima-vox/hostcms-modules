@@ -14,6 +14,31 @@ class Optimizer_Image_Generator
         );
     }
 
+    public static function needsGenerationForSettings($source, array $settings)
+    {
+        if (!is_file($source) || !is_readable($source)) {
+            return false;
+        }
+
+        $maxBytes = max(1, (int) $settings['image_max_source_mb']) * 1024 * 1024;
+        if (filesize($source) > $maxBytes) {
+            return false;
+        }
+
+        foreach (self::getFormats($settings) as $format => $quality) {
+            if (!self::supportsFormat($format)) {
+                continue;
+            }
+
+            $target = preg_replace('/\.(jpe?g|png)$/i', '.' . $format, $source);
+            if (self::needsGeneration($source, $target)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function generate($source, array $settings)
     {
         $result = array('generated' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => array());
@@ -30,15 +55,7 @@ class Optimizer_Image_Generator
             return $result;
         }
 
-        $formats = array();
-        if (!empty($settings['image_generate_webp'])) {
-            $formats['webp'] = max(1, min(100, (int) $settings['image_webp_quality']));
-        }
-        if (!empty($settings['image_generate_avif'])) {
-            $formats['avif'] = max(1, min(100, (int) $settings['image_avif_quality']));
-        }
-
-        foreach ($formats as $format => $quality) {
+        foreach (self::getFormats($settings) as $format => $quality) {
             if (!self::supportsFormat($format)) {
                 $result['failed']++;
                 $result['errors'][] = strtoupper($format) . ' не поддерживается сервером.';
@@ -63,6 +80,21 @@ class Optimizer_Image_Generator
         }
 
         return $result;
+    }
+
+    protected static function getFormats(array $settings)
+    {
+        $formats = array();
+
+        if (!empty($settings['image_generate_webp'])) {
+            $formats['webp'] = max(1, min(100, (int) $settings['image_webp_quality']));
+        }
+
+        if (!empty($settings['image_generate_avif'])) {
+            $formats['avif'] = max(1, min(100, (int) $settings['image_avif_quality']));
+        }
+
+        return $formats;
     }
 
     protected static function needsGeneration($source, $target)
