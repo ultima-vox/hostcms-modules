@@ -16,11 +16,13 @@ class Optimizer_Image_Generator
 
     public static function needsGenerationForSettings($source, array $settings)
     {
+        $settings = self::normalizeSettings($settings);
+
         if (!is_file($source) || !is_readable($source)) {
             return false;
         }
 
-        $maxBytes = max(1, (int) $settings['image_max_source_mb']) * 1024 * 1024;
+        $maxBytes = $settings['image_max_source_mb'] * 1024 * 1024;
         if (filesize($source) > $maxBytes) {
             return false;
         }
@@ -41,8 +43,9 @@ class Optimizer_Image_Generator
 
     public static function generate($source, array $settings)
     {
+        $settings = self::normalizeSettings($settings);
         $result = array('generated' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => array());
-        $maxBytes = max(1, (int) $settings['image_max_source_mb']) * 1024 * 1024;
+        $maxBytes = $settings['image_max_source_mb'] * 1024 * 1024;
 
         if (!is_file($source) || !is_readable($source)) {
             $result['failed']++;
@@ -82,16 +85,33 @@ class Optimizer_Image_Generator
         return $result;
     }
 
+    protected static function normalizeSettings(array $settings)
+    {
+        $settings += array(
+            'image_generate_webp' => false,
+            'image_generate_avif' => false,
+            'image_webp_quality' => 82,
+            'image_avif_quality' => 50,
+            'image_max_source_mb' => 25
+        );
+
+        $settings['image_webp_quality'] = max(1, min(100, (int) $settings['image_webp_quality']));
+        $settings['image_avif_quality'] = max(1, min(100, (int) $settings['image_avif_quality']));
+        $settings['image_max_source_mb'] = max(1, min(200, (int) $settings['image_max_source_mb']));
+
+        return $settings;
+    }
+
     protected static function getFormats(array $settings)
     {
         $formats = array();
 
         if (!empty($settings['image_generate_webp'])) {
-            $formats['webp'] = max(1, min(100, (int) $settings['image_webp_quality']));
+            $formats['webp'] = $settings['image_webp_quality'];
         }
 
         if (!empty($settings['image_generate_avif'])) {
-            $formats['avif'] = max(1, min(100, (int) $settings['image_avif_quality']));
+            $formats['avif'] = $settings['image_avif_quality'];
         }
 
         return $formats;
