@@ -34,8 +34,7 @@ $booleanKeys = array(
     'image_generate_avif',
     'dns_prefetch_enabled',
     'preconnect_enabled',
-    'preload_fonts_enabled',
-    'critical_css_enabled'
+    'preload_fonts_enabled'
 );
 
 $integerRanges = array(
@@ -80,6 +79,18 @@ function optimizerEnabledCount(array $settings)
     return $count;
 }
 
+function optimizerSummary(array $settings)
+{
+    $enabledCount = optimizerEnabledCount($settings);
+
+    return array(
+        'enabledCount' => $enabledCount,
+        'mode' => $enabledCount === 0
+            ? Core::_('Optimizer.safe_mode')
+            : Core::_('Optimizer.custom_mode')
+    );
+}
+
 if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
     if (!optimizerCheckToken($optimizerAjaxToken)) {
         optimizerJsonResponse(array(
@@ -114,17 +125,15 @@ if ((int) Core_Array::getPost('ajax_save', 0) === 1) {
     }
 
     $success = Optimizer_Settings::save($settings, $siteId);
-    $enabledCount = optimizerEnabledCount($settings);
+    $summary = optimizerSummary($settings);
 
     optimizerJsonResponse(array(
         'success' => $success,
         'message' => $success
             ? Core::_('Optimizer.messages_success_save')
             : Core::_('Optimizer.messages_save_error'),
-        'enabledCount' => $enabledCount,
-        'mode' => $enabledCount === 0
-            ? Core::_('Optimizer.safe_mode')
-            : Core::_('Optimizer.custom_mode'),
+        'enabledCount' => $summary['enabledCount'],
+        'mode' => $summary['mode'],
         'value' => isset($settings[$name]) ? $settings[$name] : null
     ));
 }
@@ -138,14 +147,19 @@ if ((int) Core_Array::getPost('ajax_save_critical_css', 0) === 1) {
     }
 
     $settings = Optimizer_Settings::get($siteId);
+    $settings['critical_css_enabled'] = (bool) ((int) Core_Array::getPost('critical_css_enabled', 0));
     $settings['critical_css'] = trim((string) Core_Array::getPost('critical_css', ''));
+
     $success = Optimizer_Settings::save($settings, $siteId);
+    $summary = optimizerSummary($settings);
 
     optimizerJsonResponse(array(
         'success' => $success,
         'message' => $success
             ? Core::_('Optimizer.critical_css_saved')
-            : Core::_('Optimizer.messages_save_error')
+            : Core::_('Optimizer.messages_save_error'),
+        'enabledCount' => $summary['enabledCount'],
+        'mode' => $summary['mode']
     ));
 }
 
@@ -297,6 +311,7 @@ $adminCss = '<style>'
     . '.optimizer-critical-actions{display:flex;align-items:center;gap:12px;margin-top:12px}'
     . '.optimizer-critical-status{min-height:20px}'
     . '.optimizer-dashboard .ace_editor{min-height:360px}'
+    . '.optimizer-critical-disabled{opacity:.65}'
     . '@media(max-width:991px){.optimizer-dashboard__right{margin-top:20px}}'
     . '</style>';
 $oForm->add(Admin_Form_Entity::factory('Code')->html($adminCss));
@@ -403,7 +418,7 @@ $oCriticalCss = Admin_Form_Entity::factory('Textarea')
     ->name('critical_css')
     ->syntaxHighlighter(defined('SYNTAX_HIGHLIGHTING') ? SYNTAX_HIGHLIGHTING : TRUE)
     ->syntaxHighlighterMode('css')
-    ->divAttr(array('class' => 'form-group col-xs-12'));
+    ->divAttr(array('class' => 'form-group col-xs-12 optimizer-critical-editor'));
 
 $oDashboardRight->add(
     Admin_Form_Entity::factory('Div')->class('row')->add($oCriticalCss)
@@ -494,13 +509,18 @@ $script = '<script>(function(){'
     . 'function post(body){return fetch(' . json_encode($ajaxPath) . ',{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},body:body.toString()}).then(function(response){if(!response.ok){throw new Error("HTTP "+response.status);}return response.json();});}'
     . 'function updateSummary(data){var mode=root.querySelector("#optimizer-status-mode");var enabled=root.querySelector("#optimizer-status-enabled");if(mode&&data.mode){mode.textContent=data.mode;}if(enabled&&data.enabledCount!==undefined){enabled.textContent=data.enabledCount;}}'
     . 'function saveField(field){var name=field.name;if(!name){return;}var value=field.type==="checkbox"?(field.checked?"1":"0"):field.value;var body=new URLSearchParams();body.set("ajax_save","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("name",name);body.set("value",value);setStatus(' . json_encode(Core::_('Optimizer.messages_saving')) . ',false);post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}if(field.type==="number"&&data.value!==null){field.value=data.value;}updateSummary(data);setStatus(data.message,false);}).catch(function(error){setStatus(error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ',true);});}'
-    . 'function criticalCssValue(){var textarea=root.querySelector("textarea[name=critical_css]");if(!textarea){return "";}try{var group=textarea.closest(".form-group");var aceNode=group?group.querySelector(".ace_editor"):null;if(aceNode&&window.ace){return window.ace.edit(aceNode).getValue();}if(textarea.nextElementSibling&&textarea.nextElementSibling.CodeMirror){return textarea.nextElementSibling.CodeMirror.getValue();}if(textarea.CodeMirror){return textarea.CodeMirror.getValue();}}catch(e){}return textarea.value;}'
-    . 'function saveCriticalCss(){var button=root.querySelector("#optimizer-save-critical-css");var box=root.querySelector("#optimizer-critical-status");var body=new URLSearchParams();body.set("ajax_save_critical_css","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("critical_css",criticalCssValue());if(button){button.disabled=true;}if(box){box.textContent=' . json_encode(Core::_('Optimizer.messages_saving')) . ';box.className="optimizer-critical-status text-muted";}post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}if(box){box.textContent=data.message;box.className="optimizer-critical-status text-success";}}).catch(function(error){if(box){box.textContent=error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ';box.className="optimizer-critical-status text-danger";}}).then(function(){if(button){button.disabled=false;}});}'
+    . 'function criticalTextarea(){return root.querySelector("textarea[name=critical_css]");}'
+    . 'function criticalAce(textarea){try{var group=textarea?textarea.closest(".form-group"):null;var node=group?group.querySelector(".ace_editor"):null;return node&&window.ace?window.ace.edit(node):null;}catch(e){return null;}}'
+    . 'function criticalCodeMirror(textarea){try{if(textarea&&textarea.nextElementSibling&&textarea.nextElementSibling.CodeMirror){return textarea.nextElementSibling.CodeMirror;}if(textarea&&textarea.CodeMirror){return textarea.CodeMirror;}}catch(e){}return null;}'
+    . 'function criticalCssValue(){var textarea=criticalTextarea();if(!textarea){return "";}var aceEditor=criticalAce(textarea);if(aceEditor){return aceEditor.getValue();}var codeMirror=criticalCodeMirror(textarea);if(codeMirror){return codeMirror.getValue();}return textarea.value;}'
+    . 'function setCriticalEditorEnabled(enabled){var textarea=criticalTextarea();var wrapper=root.querySelector(".optimizer-critical-editor");if(textarea){textarea.disabled=!enabled;}var aceEditor=criticalAce(textarea);if(aceEditor){aceEditor.setReadOnly(!enabled);aceEditor.renderer.$cursorLayer.element.style.display=enabled?"":"none";}var codeMirror=criticalCodeMirror(textarea);if(codeMirror){codeMirror.setOption("readOnly",!enabled);codeMirror.refresh();}if(wrapper){wrapper.classList.toggle("optimizer-critical-disabled",!enabled);}}'
+    . 'function saveCriticalCss(){var button=root.querySelector("#optimizer-save-critical-css");var box=root.querySelector("#optimizer-critical-status");var toggle=root.querySelector("input[name=critical_css_enabled]");var body=new URLSearchParams();body.set("ajax_save_critical_css","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');body.set("critical_css_enabled",toggle&&toggle.checked?"1":"0");body.set("critical_css",criticalCssValue());if(button){button.disabled=true;}if(box){box.textContent=' . json_encode(Core::_('Optimizer.messages_saving')) . ';box.className="optimizer-critical-status text-muted";}post(body).then(function(data){if(!data.success){throw new Error(data.message||"Save failed");}updateSummary(data);if(box){box.textContent=data.message;box.className="optimizer-critical-status text-success";}}).catch(function(error){if(box){box.textContent=error.message||' . json_encode(Core::_('Optimizer.messages_save_error')) . ';box.className="optimizer-critical-status text-danger";}}).then(function(){if(button){button.disabled=false;}});}'
     . 'function renderGeneration(data){var box=root.querySelector("#optimizer-generation-status");if(!box){return;}var text=data.message||"";if(data.found!==undefined){text+=" Найдено: "+data.found+". Обработано: "+data.processed+". Создано: "+data.generated+". Пропущено: "+data.skipped+". Ошибок: "+data.failed+". Осталось: "+data.remaining+".";}if(data.errors&&data.errors.length){text+=" "+data.errors.join("; ");}box.textContent=text;box.className="alert "+(data.success&&data.failed===0?"alert-success":"alert-warning")+" margin-top-10";}'
     . 'function finishGeneration(){var start=root.querySelector("#optimizer-generate-images");var stop=root.querySelector("#optimizer-stop-generation");if(start){start.disabled=false;}if(stop){stop.disabled=true;}}'
     . 'function runGeneration(){if(generationStopped){finishGeneration();return;}var body=new URLSearchParams();body.set("ajax_generate_images","1");body.set("token",' . json_encode($optimizerAjaxToken) . ');post(body).then(function(data){if(!data.success){throw new Error(data.message||"Generation failed");}renderGeneration(data);if(data.remaining>0&&data.failed===0&&!generationStopped){setTimeout(runGeneration,250);}else{finishGeneration();}}).catch(function(error){renderGeneration({success:false,message:error.message||"Generation failed"});finishGeneration();});}'
-    . 'root.querySelectorAll(".optimizer-switch input[type=checkbox][name]").forEach(function(field){field.addEventListener("change",function(){saveField(field);});});'
+    . 'root.querySelectorAll(".optimizer-switch input[type=checkbox][name]").forEach(function(field){if(field.name==="critical_css_enabled"){field.addEventListener("change",function(){setCriticalEditorEnabled(field.checked);var box=root.querySelector("#optimizer-critical-status");if(box){box.textContent="";}});return;}field.addEventListener("change",function(){saveField(field);});});'
     . 'root.querySelectorAll(".optimizer-live-setting[name]").forEach(function(field){field.addEventListener("input",function(){clearTimeout(timers[field.name]);timers[field.name]=setTimeout(function(){saveField(field);},700);});field.addEventListener("blur",function(){clearTimeout(timers[field.name]);saveField(field);});});'
+    . 'var criticalToggle=root.querySelector("input[name=critical_css_enabled]");setTimeout(function(){setCriticalEditorEnabled(!!(criticalToggle&&criticalToggle.checked));},0);setTimeout(function(){setCriticalEditorEnabled(!!(criticalToggle&&criticalToggle.checked));},300);'
     . 'var criticalButton=root.querySelector("#optimizer-save-critical-css");if(criticalButton){criticalButton.addEventListener("click",saveCriticalCss);}'
     . 'var start=root.querySelector("#optimizer-generate-images");var stop=root.querySelector("#optimizer-stop-generation");if(start){start.addEventListener("click",function(){generationStopped=false;start.disabled=true;if(stop){stop.disabled=false;}var box=root.querySelector("#optimizer-generation-status");if(box){box.textContent=' . json_encode(Core::_('Optimizer.image_generation_running')) . ';box.className="alert alert-info margin-top-10";}runGeneration();});}if(stop){stop.addEventListener("click",function(){generationStopped=true;finishGeneration();});}'
     . '})();</script>';
