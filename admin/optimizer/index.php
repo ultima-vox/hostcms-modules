@@ -128,63 +128,88 @@ $statusHtml = '<div class="alert alert-info">'
 $oForm->add(Admin_Form_Entity::factory('Code')->html($statusHtml));
 $oForm->add(Admin_Form_Entity::factory('Code')->html('<input type="hidden" name="save" value="1">'));
 
-$oMainTab = Admin_Form_Entity::factory('Tab')
-    ->name('main')
-    ->caption(Core::_('Optimizer.tab_main'));
-
-$checkboxes = array(
-    'minify_html' => Core::_('Optimizer.minify_html'),
-    'html_remove_comments' => Core::_('Optimizer.html_remove_comments'),
-    'lazy_load_images' => Core::_('Optimizer.lazy_load_images'),
-    'rewrite_webp' => Core::_('Optimizer.rewrite_webp'),
-    'rewrite_avif' => Core::_('Optimizer.rewrite_avif'),
-    'combine_css' => Core::_('Optimizer.combine_css'),
-    'minify_css' => Core::_('Optimizer.minify_css'),
-    'combine_js' => Core::_('Optimizer.combine_js'),
-    'minify_js' => Core::_('Optimizer.minify_js'),
-    'dns_prefetch_enabled' => Core::_('Optimizer.dns_prefetch_enabled'),
-    'preconnect_enabled' => Core::_('Optimizer.preconnect_enabled'),
-    'preload_fonts_enabled' => Core::_('Optimizer.preload_fonts_enabled'),
-    'critical_css_enabled' => Core::_('Optimizer.critical_css_enabled')
-);
-
-foreach ($checkboxes as $name => $caption) {
-    $oMainTab->add(
+function optimizerAddCheckbox($tab, $name, $caption, array $settings, $class = 'form-group col-xs-12 col-md-6')
+{
+    $tab->add(
         Admin_Form_Entity::factory('Div')->class('row')->add(
             Admin_Form_Entity::factory('Checkbox')
                 ->name($name)
                 ->value(!empty($settings[$name]) ? 1 : 0)
                 ->caption($caption)
-                ->divAttr(array('class' => 'form-group col-xs-12 col-md-6'))
+                ->divAttr(array('class' => $class))
         )
     );
 }
 
-$textareas = array(
-    'dns_prefetch' => array(Core::_('Optimizer.dns_prefetch'), 4),
-    'preconnect' => array(Core::_('Optimizer.preconnect'), 4),
-    'preload_fonts' => array(Core::_('Optimizer.preload_fonts'), 4),
-    'critical_css' => array(Core::_('Optimizer.critical_css'), 10)
-);
-
-foreach ($textareas as $name => $meta) {
-    $oMainTab->add(
+function optimizerAddTextarea($tab, $name, $caption, array $settings, $rows = 5)
+{
+    $tab->add(
         Admin_Form_Entity::factory('Code')->html(
             '<div class="form-group">'
             . '<label for="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '">'
-            . htmlspecialchars($meta[0], ENT_QUOTES, 'UTF-8')
+            . htmlspecialchars($caption, ENT_QUOTES, 'UTF-8')
             . '</label>'
             . '<textarea class="form-control" id="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
             . '" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
-            . '" rows="' . (int) $meta[1] . '">'
+            . '" rows="' . (int) $rows . '">'
             . htmlspecialchars(isset($settings[$name]) ? $settings[$name] : '', ENT_QUOTES, 'UTF-8')
             . '</textarea></div>'
         )
     );
 }
 
+$oMainTab = Admin_Form_Entity::factory('Tab')
+    ->name('main')
+    ->caption(Core::_('Optimizer.tab_main'));
+$oMainTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_html'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oMainTab, 'minify_html', Core::_('Optimizer.minify_html'), $settings);
+optimizerAddCheckbox($oMainTab, 'html_remove_comments', Core::_('Optimizer.html_remove_comments'), $settings);
+
+$oAssetsTab = Admin_Form_Entity::factory('Tab')
+    ->name('assets')
+    ->caption(Core::_('Optimizer.tab_assets'));
+$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_css'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oAssetsTab, 'combine_css', Core::_('Optimizer.combine_css'), $settings);
+optimizerAddCheckbox($oAssetsTab, 'minify_css', Core::_('Optimizer.minify_css'), $settings);
+$oAssetsTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_js'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oAssetsTab, 'combine_js', Core::_('Optimizer.combine_js'), $settings);
+optimizerAddCheckbox($oAssetsTab, 'minify_js', Core::_('Optimizer.minify_js'), $settings);
+
+$oImagesTab = Admin_Form_Entity::factory('Tab')
+    ->name('images')
+    ->caption(Core::_('Optimizer.tab_images'));
+$oImagesTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_images'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oImagesTab, 'lazy_load_images', Core::_('Optimizer.lazy_load_images'), $settings);
+optimizerAddCheckbox($oImagesTab, 'rewrite_webp', Core::_('Optimizer.rewrite_webp'), $settings);
+optimizerAddCheckbox($oImagesTab, 'rewrite_avif', Core::_('Optimizer.rewrite_avif'), $settings);
+
+$oNetworkTab = Admin_Form_Entity::factory('Tab')
+    ->name('network')
+    ->caption(Core::_('Optimizer.tab_network'));
+$oNetworkTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_dns'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oNetworkTab, 'dns_prefetch_enabled', Core::_('Optimizer.dns_prefetch_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddTextarea($oNetworkTab, 'dns_prefetch', Core::_('Optimizer.dns_prefetch'), $settings, 5);
+$oNetworkTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_preconnect'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oNetworkTab, 'preconnect_enabled', Core::_('Optimizer.preconnect_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddTextarea($oNetworkTab, 'preconnect', Core::_('Optimizer.preconnect'), $settings, 5);
+
+$oAdvancedTab = Admin_Form_Entity::factory('Tab')
+    ->name('advanced')
+    ->caption(Core::_('Optimizer.tab_advanced'));
+$oAdvancedTab->add(Admin_Form_Entity::factory('Code')->html('<h4>' . htmlspecialchars(Core::_('Optimizer.section_fonts'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oAdvancedTab, 'preload_fonts_enabled', Core::_('Optimizer.preload_fonts_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddTextarea($oAdvancedTab, 'preload_fonts', Core::_('Optimizer.preload_fonts'), $settings, 6);
+$oAdvancedTab->add(Admin_Form_Entity::factory('Code')->html('<hr><h4>' . htmlspecialchars(Core::_('Optimizer.section_critical_css'), ENT_QUOTES, 'UTF-8') . '</h4>'));
+optimizerAddCheckbox($oAdvancedTab, 'critical_css_enabled', Core::_('Optimizer.critical_css_enabled'), $settings, 'form-group col-xs-12');
+optimizerAddTextarea($oAdvancedTab, 'critical_css', Core::_('Optimizer.critical_css'), $settings, 12);
+
 $oTabs = Admin_Form_Entity::factory('Tabs');
-$oTabs->add($oMainTab);
+$oTabs
+    ->add($oMainTab)
+    ->add($oAssetsTab)
+    ->add($oImagesTab)
+    ->add($oNetworkTab)
+    ->add($oAdvancedTab);
 $oForm->add($oTabs);
 
 $savePath = Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php');
