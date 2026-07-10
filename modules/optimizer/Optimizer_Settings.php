@@ -17,6 +17,13 @@ class Optimizer_Settings
         'image_exclude_classes' => "logo\nhero\nlcp",
         'rewrite_avif' => false,
         'rewrite_webp' => false,
+        'image_generate_webp' => false,
+        'image_generate_avif' => false,
+        'image_webp_quality' => 82,
+        'image_avif_quality' => 50,
+        'image_scan_paths' => "upload",
+        'image_batch_limit' => 20,
+        'image_max_source_mb' => 25,
         'dns_prefetch_enabled' => false,
         'dns_prefetch' => '',
         'preconnect_enabled' => false,
@@ -99,8 +106,6 @@ class Optimizer_Settings
             }
         }
 
-        $data['lazy_load_skip_first'] = max(0, min(20, (int) $data['lazy_load_skip_first']));
-
         return $data;
     }
 
@@ -108,7 +113,6 @@ class Optimizer_Settings
     {
         $siteId = $siteId === null ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
         $data['config_version'] = self::$defaults['config_version'];
-        $data['lazy_load_skip_first'] = max(0, min(20, isset($data['lazy_load_skip_first']) ? (int) $data['lazy_load_skip_first'] : 2));
 
         if (!self::ensureDir()) {
             return false;
