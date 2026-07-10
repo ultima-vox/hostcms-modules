@@ -11,8 +11,6 @@ require_once('../../bootstrap.php');
 
 Core_Auth::authorization($sModule = 'page_optimizer');
 
-require_once CMS_FOLDER . 'modules/page_optimizer/PageOptimizer_Settings.php';
-
 function pageOptimizerEscape($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -68,7 +66,7 @@ function pageOptimizerRenderTextarea($name, $caption, array $settings, $rows = 3
 function pageOptimizerRenderStatusCard($title, $value, $icon)
 {
     echo '<div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">';
-    echo '<div class="databox radius-bordered databox-shadowed databox-graded">';
+    echo '<div class="databox radius-bordered databox-shadowed databox-graded databox-graded">';
     echo '<div class="databox-left bg-blue"><div class="databox-piechart"><i class="fa ' . pageOptimizerEscape($icon) . ' fa-2x white"></i></div></div>';
     echo '<div class="databox-right"><span class="databox-number blue">' . pageOptimizerEscape($value) . '</span>';
     echo '<div class="databox-text darkgray">' . pageOptimizerEscape($title) . '</div></div>';
