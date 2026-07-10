@@ -3,13 +3,12 @@
 defined('HOSTCMS') || exit('HostCMS: access denied.');
 
 /**
- * Page Optimizer Module for HostCMS 7
- * New generation optimization module
+ * Page Optimizer Module for HostCMS 7.
  */
 class PageOptimizer_Module extends Core_Module
 {
-    public $version = '1.0';
-    public $date = '2026-07-09';
+    public $version = '1.1';
+    public $date = '2026-07-10';
 
     protected $_moduleName = 'page_optimizer';
 
@@ -21,10 +20,10 @@ class PageOptimizer_Module extends Core_Module
             array(
                 'sorting' => 10,
                 'block'   => 1,
-                'ico'     => 'fa fa-tachometer-alt',
+                'ico'     => 'fa fa-tachometer',
                 'name'    => Core::_('PageOptimizer.menu_name'),
-                'href'    => '/admin/page_optimizer/index.php',
-                'onclick' => "$.adminLoad({path: '/admin/page_optimizer/index.php'}); return false"
+                'href'    => Admin_Form_Controller::correctBackendPath('/{admin}/page_optimizer/index.php'),
+                'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/page_optimizer/index.php'}); return false")
             )
         );
 
@@ -43,7 +42,6 @@ class PageOptimizer_Module extends Core_Module
         }
 
         $response = Core_Response::instance();
-
         $html = method_exists($response, 'getBody') ? $response->getBody() : null;
 
         if (empty($html) || !is_string($html)) {
