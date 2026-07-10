@@ -11,6 +11,14 @@ require_once('../../bootstrap.php');
 
 Core_Auth::authorization($sModule = 'page_optimizer');
 
+// Правильная загрузка модуля и его классов
+try {
+    Core_Module::factory('page_optimizer');
+} catch (Exception $e) {
+    // Модуль не активен или не установлен
+    die('Module Page Optimizer is not installed or active.');
+}
+
 function pageOptimizerEscape($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
