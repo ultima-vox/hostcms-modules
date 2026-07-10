@@ -1,0 +1,73 @@
+<?php
+
+defined('HOSTCMS') || exit('HostCMS: access denied.');
+
+require_once __DIR__ . '/Optimizer_Context.php';
+require_once __DIR__ . '/Optimizer_Settings.php';
+require_once __DIR__ . '/Optimizer_Html.php';
+require_once __DIR__ . '/Optimizer_Assets.php';
+require_once __DIR__ . '/Optimizer.php';
+
+/**
+ * Optimizer module for HostCMS 7.
+ */
+class Optimizer_Module extends Core_Module
+{
+    public $version = '1.5';
+    public $date = '2026-07-10';
+
+    protected $_moduleName = 'optimizer';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->menu = array(
+            array(
+                'sorting' => 10,
+                'block' => 1,
+                'ico' => 'fa fa-tachometer',
+                'name' => Core::_('Optimizer.menu_name'),
+                'href' => Admin_Form_Controller::correctBackendPath('/{admin}/optimizer/index.php'),
+                'onclick' => Admin_Form_Controller::correctBackendPath("$.adminLoad({path: '/{admin}/optimizer/index.php'}); return false")
+            )
+        );
+
+        Core_Event::attach('onAfterShowTemplate', array($this, 'onAfterShowTemplate'));
+    }
+
+    public function onAfterShowTemplate($args)
+    {
+        if (!Core::moduleIsActive($this->_moduleName)) {
+            return;
+        }
+
+        $response = Core_Response::instance();
+        $html = method_exists($response, 'getBody') ? $response->getBody() : null;
+
+        if (!is_string($html) || $html === '') {
+            return;
+        }
+
+        if (method_exists($response, 'setBody')) {
+            $response->setBody(Optimizer::process($html));
+        }
+    }
+
+    public function install()
+    {
+        $siteId = defined('CURRENT_SITE') ? CURRENT_SITE : 0;
+
+        if (!Optimizer_Settings::install($siteId)) {
+            throw new Exception(
+                'Optimizer: cannot create writable directory '
+                . Optimizer_Settings::getDirectory()
+            );
+        }
+    }
+
+    public function uninstall()
+    {
+        Optimizer_Settings::uninstall();
+    }
+}
