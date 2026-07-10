@@ -5,7 +5,7 @@ defined('HOSTCMS') || exit('HostCMS: access denied.');
 class Optimizer_Settings
 {
     protected static $defaults = array(
-        'config_version' => 3,
+        'config_version' => 4,
         'minify_html' => false,
         'html_remove_comments' => false,
         'combine_css' => false,
@@ -41,6 +41,81 @@ class Optimizer_Settings
             'js_requests_saved' => 0
         )
     );
+
+    public static function getDefaults()
+    {
+        return self::$defaults;
+    }
+
+    public static function normalize(array $data)
+    {
+        $normalized = array_merge(self::$defaults, $data);
+
+        $booleanKeys = array(
+            'minify_html',
+            'html_remove_comments',
+            'combine_css',
+            'minify_css',
+            'combine_js',
+            'minify_js',
+            'lazy_load_images',
+            'rewrite_avif',
+            'rewrite_webp',
+            'image_generate_webp',
+            'image_generate_avif',
+            'dns_prefetch_enabled',
+            'preconnect_enabled',
+            'preload_fonts_enabled',
+            'critical_css_enabled'
+        );
+
+        foreach ($booleanKeys as $key) {
+            $normalized[$key] = !empty($normalized[$key]);
+        }
+
+        $ranges = array(
+            'lazy_load_skip_first' => array(0, 20),
+            'image_webp_quality' => array(1, 100),
+            'image_avif_quality' => array(1, 100),
+            'image_batch_limit' => array(1, 200),
+            'image_max_source_mb' => array(1, 200)
+        );
+
+        foreach ($ranges as $key => $range) {
+            $value = isset($normalized[$key]) && is_numeric($normalized[$key])
+                ? (int) $normalized[$key]
+                : (int) self::$defaults[$key];
+            $normalized[$key] = max($range[0], min($range[1], $value));
+        }
+
+        $textKeys = array(
+            'image_exclude_classes',
+            'image_scan_paths',
+            'dns_prefetch',
+            'preconnect',
+            'preload_fonts',
+            'critical_css'
+        );
+
+        foreach ($textKeys as $key) {
+            if (!isset($normalized[$key]) || !is_scalar($normalized[$key])) {
+                $normalized[$key] = self::$defaults[$key];
+            }
+            else {
+                $normalized[$key] = (string) $normalized[$key];
+            }
+        }
+
+        if (trim($normalized['image_scan_paths']) === '') {
+            $normalized['image_scan_paths'] = self::$defaults['image_scan_paths'];
+        }
+
+        $stats = isset($data['stats']) && is_array($data['stats']) ? $data['stats'] : array();
+        $normalized['stats'] = array_merge(self::$defaults['stats'], $stats);
+        $normalized['config_version'] = self::$defaults['config_version'];
+
+        return $normalized;
+    }
 
     public static function getDirectory()
     {
@@ -94,25 +169,23 @@ class Optimizer_Settings
     public static function get($siteId = null)
     {
         $siteId = $siteId === null ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
-        $data = self::$defaults;
+        $data = array();
         $file = self::path($siteId);
 
         if (is_file($file)) {
             $decoded = json_decode((string) file_get_contents($file), true);
             if (is_array($decoded)) {
-                $data = array_merge($data, $decoded);
-                $stats = isset($decoded['stats']) && is_array($decoded['stats']) ? $decoded['stats'] : array();
-                $data['stats'] = array_merge(self::$defaults['stats'], $stats);
+                $data = $decoded;
             }
         }
 
-        return $data;
+        return self::normalize($data);
     }
 
     public static function save($data, $siteId = null)
     {
         $siteId = $siteId === null ? (defined('CURRENT_SITE') ? CURRENT_SITE : 0) : $siteId;
-        $data['config_version'] = self::$defaults['config_version'];
+        $data = self::normalize(is_array($data) ? $data : array());
 
         if (!self::ensureDir()) {
             return false;
