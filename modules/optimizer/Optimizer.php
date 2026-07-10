@@ -6,12 +6,6 @@ class Optimizer
 {
     protected static $bufferStarted = false;
 
-    /**
-     * Start output buffering once for frontend requests.
-     *
-     * The callback receives the final rendered response and applies enabled
-     * optimizations only when it is a complete HTML document.
-     */
     public static function startOutputBuffer()
     {
         if (self::$bufferStarted || PHP_SAPI === 'cli') {
@@ -33,9 +27,6 @@ class Optimizer
         return self::$bufferStarted;
     }
 
-    /**
-     * Backward-compatible entry point for old layouts.
-     */
     public static function ob()
     {
         return self::startOutputBuffer();
@@ -115,30 +106,129 @@ class Optimizer
             return $html;
         }
 
-        $result = preg_replace_callback('/<img\b[^>]*>/i', function ($match) use ($settings) {
-            $img = $match[0];
+        $skipFirst = max(0, isset($settings['lazy_load_skip_first']) ? (int) $settings['lazy_load_skip_first'] : 2);
+        $excludedClasses = self::parseClassList(isset($settings['image_exclude_classes']) ? $settings['image_exclude_classes'] : '');
+        $imageIndex = 0;
 
-            if (stripos($img, 'data-optimizer-skip') !== false) {
+        $result = preg_replace_callback('/<img\b[^>]*>/i', function ($match) use ($settings, $skipFirst, $excludedClasses, &$imageIndex) {
+            $img = $match[0];
+            $currentIndex = $imageIndex++;
+
+            if (self::shouldSkipImage($img, $excludedClasses)) {
                 return $img;
             }
 
             if (!empty($settings['rewrite_avif']) || !empty($settings['rewrite_webp'])) {
-                if (preg_match('/\ssrc=["\'](.*?)["\']/i', $img, $srcMatch)) {
-                    $newSrc = self::getBestImageVariant($srcMatch[1], $settings);
-                    if ($newSrc !== $srcMatch[1]) {
-                        $img = str_replace($srcMatch[1], $newSrc, $img);
-                    }
-                }
+                $img = self::rewriteAttributeUrl($img, 'src', $settings);
+                $img = self::rewriteSrcsetAttribute($img, 'srcset', $settings);
             }
 
-            if (!empty($settings['lazy_load_images']) && stripos($img, ' loading=') === false) {
-                $img = rtrim($img, '>') . ' loading="lazy" decoding="async">';
+            $protectFromLazy = $currentIndex < $skipFirst
+                || preg_match('/\sloading\s*=\s*["\']eager["\']/i', $img)
+                || preg_match('/\sfetchpriority\s*=\s*["\']high["\']/i', $img);
+
+            if (!empty($settings['lazy_load_images']) && !$protectFromLazy && stripos($img, ' loading=') === false) {
+                $img = self::appendAttribute($img, 'loading="lazy"');
+            }
+
+            if (!empty($settings['lazy_load_images']) && !$protectFromLazy && stripos($img, ' decoding=') === false) {
+                $img = self::appendAttribute($img, 'decoding="async"');
             }
 
             return $img;
         }, $html);
 
+        if (!is_string($result)) {
+            return $html;
+        }
+
+        if (!empty($settings['rewrite_avif']) || !empty($settings['rewrite_webp'])) {
+            $result = preg_replace_callback('/<source\b[^>]*>/i', function ($match) use ($settings, $excludedClasses) {
+                $source = $match[0];
+
+                if (self::shouldSkipImage($source, $excludedClasses)) {
+                    return $source;
+                }
+
+                return self::rewriteSrcsetAttribute($source, 'srcset', $settings);
+            }, $result);
+        }
+
         return is_string($result) ? $result : $html;
+    }
+
+    protected static function shouldSkipImage($tag, array $excludedClasses)
+    {
+        if (stripos($tag, 'data-optimizer-skip') !== false) {
+            return true;
+        }
+
+        if (!empty($excludedClasses) && preg_match('/\sclass\s*=\s*(["\'])(.*?)\1/i', $tag, $match)) {
+            $classes = preg_split('/\s+/', trim($match[2]));
+            foreach ($classes as $class) {
+                if (in_array(strtolower($class), $excludedClasses, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    protected static function rewriteAttributeUrl($tag, $attribute, $settings)
+    {
+        $pattern = '/(\s' . preg_quote($attribute, '/') . '\s*=\s*)(["\'])(.*?)\2/i';
+
+        return preg_replace_callback($pattern, function ($match) use ($settings) {
+            $newUrl = self::getBestImageVariant($match[3], $settings);
+            return $match[1] . $match[2] . $newUrl . $match[2];
+        }, $tag, 1);
+    }
+
+    protected static function rewriteSrcsetAttribute($tag, $attribute, $settings)
+    {
+        $pattern = '/(\s' . preg_quote($attribute, '/') . '\s*=\s*)(["\'])(.*?)\2/i';
+
+        return preg_replace_callback($pattern, function ($match) use ($settings) {
+            $items = preg_split('/\s*,\s*/', trim($match[3]));
+            $rewritten = array();
+
+            foreach ($items as $item) {
+                if ($item === '') {
+                    continue;
+                }
+
+                $parts = preg_split('/\s+/', trim($item), 2);
+                $url = self::getBestImageVariant($parts[0], $settings);
+                $rewritten[] = $url . (isset($parts[1]) ? ' ' . $parts[1] : '');
+            }
+
+            return $match[1] . $match[2] . implode(', ', $rewritten) . $match[2];
+        }, $tag, 1);
+    }
+
+    protected static function appendAttribute($tag, $attribute)
+    {
+        if (preg_match('/\/\s*>$/', $tag)) {
+            return preg_replace('/\/\s*>$/', ' ' . $attribute . ' />', $tag);
+        }
+
+        return preg_replace('/>$/', ' ' . $attribute . '>', $tag);
+    }
+
+    protected static function parseClassList($value)
+    {
+        $classes = preg_split('/[\s,;]+/', strtolower((string) $value));
+        $result = array();
+
+        foreach ($classes as $class) {
+            $class = trim($class);
+            if ($class !== '') {
+                $result[] = $class;
+            }
+        }
+
+        return array_values(array_unique($result));
     }
 
     protected static function parseLines($value)
@@ -170,6 +260,12 @@ class Optimizer
 
     protected static function getBestImageVariant($src, $settings)
     {
+        $src = trim((string) $src);
+
+        if ($src === '' || preg_match('#^(?:https?:)?//#i', $src) || stripos($src, 'data:') === 0 || stripos($src, 'blob:') === 0) {
+            return $src;
+        }
+
         $clean = preg_replace('/[?#].*$/', '', $src);
         $ext = strtolower(pathinfo($clean, PATHINFO_EXTENSION));
 
@@ -177,14 +273,15 @@ class Optimizer
             return $src;
         }
 
+        $suffix = substr($src, strlen($clean));
         $base = preg_replace('/\.' . preg_quote($ext, '/') . '$/i', '', $clean);
 
         if (!empty($settings['rewrite_avif']) && is_file(CMS_FOLDER . ltrim($base . '.avif', '/'))) {
-            return $base . '.avif' . substr($src, strlen($clean));
+            return $base . '.avif' . $suffix;
         }
 
         if (!empty($settings['rewrite_webp']) && is_file(CMS_FOLDER . ltrim($base . '.webp', '/'))) {
-            return $base . '.webp' . substr($src, strlen($clean));
+            return $base . '.webp' . $suffix;
         }
 
         return $src;
